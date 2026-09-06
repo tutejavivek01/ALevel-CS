@@ -11,7 +11,13 @@
       "Bash(npm install *)",
       "Bash(npx playwright *)",
       "Bash(npm run *)",
-      "Bash(npm uninstall *)"
+      "Bash(npm uninstall *)",
+      "Bash(psql --version)",
+      "Bash(node -e \"console.log\\(process.version\\)\")",
+      "Bash(node -e ' *)",
+      "Bash(nslookup db.exxvkimkkkkmmnhbjprr.supabase.co)",
+      "Bash(nslookup -type=AAAA db.exxvkimkkkkmmnhbjprr.supabase.co)",
+      "Bash(node *)"
     ]
   }
 }
