@@ -30,7 +30,7 @@ seeding) exist specifically so later tasks don't have to reinvent them.
 - [x] 20. Python problems: schema + RLS
 - [x] 21. Python problems: authoring + list UI
 - [x] 22. Python problems: code editor + static detail page
-- [ ] 23. Pyodide execution: basic Web Worker
+- [x] 23. Pyodide execution: basic Web Worker
 - [ ] 24. Pyodide execution: timeout/interrupt
 - [ ] 25. Python problems: submission persistence + attempt history
 - [ ] 26. Python problems: review workflow

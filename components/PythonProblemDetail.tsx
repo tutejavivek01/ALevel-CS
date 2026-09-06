@@ -9,6 +9,8 @@ import {
   type PythonTestCase,
 } from '@/lib/db/use-python-problem';
 import type { PythonProblem } from '@/lib/db/use-python-problems';
+import { usePyodideWorker } from '@/lib/python/use-pyodide-worker';
+import type { PyodideRunResponse } from '@/lib/python/pyodide-protocol';
 
 type Props = {
   problemId: number;
@@ -20,8 +22,25 @@ export function PythonProblemDetail({ problemId, initialProblem, initialTestCase
   const { data: problem } = usePythonProblem(problemId, initialProblem);
   const { data: testCases } = usePythonTestCases(problemId, initialTestCases);
   const [code, setCode] = useState(initialProblem.starter_code ?? '');
+  const { run } = usePyodideWorker();
+  const [output, setOutput] = useState<PyodideRunResponse | null>(null);
+  const [isRunning, setIsRunning] = useState(false);
 
   if (!problem) return null;
+
+  // Runs against the first test case's input as a quick smoke check
+  // while the student is editing (task 23) - grading against every
+  // test case and persisting the result is task 25.
+  async function handleRun() {
+    setIsRunning(true);
+    setOutput(null);
+    try {
+      const result = await run(code, (testCases ?? [])[0]?.input ?? '');
+      setOutput(result);
+    } finally {
+      setIsRunning(false);
+    }
+  }
 
   return (
     <Card>
@@ -58,10 +77,25 @@ export function PythonProblemDetail({ problemId, initialProblem, initialTestCase
       <PythonEditor value={code} onChange={setCode} />
 
       <div className="ex-actions">
-        <button className="btn2" disabled title="Execution lands in task 23">
-          Run
+        <button className="btn2" onClick={handleRun} disabled={isRunning}>
+          {isRunning ? 'Running…' : 'Run'}
         </button>
       </div>
+
+      {output && (
+        <div className={`python-output ${output.outcome}`}>
+          <div className="field-label">Output</div>
+          <pre>{output.stdout || '(no output)'}</pre>
+          {output.outcome === 'error' && (
+            <>
+              <div className="field-label" style={{ marginTop: 8 }}>
+                Traceback
+              </div>
+              <pre>{output.traceback}</pre>
+            </>
+          )}
+        </div>
+      )}
     </Card>
   );
 }

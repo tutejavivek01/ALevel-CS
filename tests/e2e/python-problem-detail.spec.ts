@@ -63,8 +63,9 @@ test('a problem renders its description, test cases, and a working editable code
   await page.keyboard.type('print("hello")');
   await expect(editor).toContainText('print("hello")');
 
-  // Nothing wired up to run it yet (task 23).
-  await expect(page.getByRole('button', { name: 'Run' })).toBeDisabled();
+  // Execution itself (task 23) is covered by pyodide-execution.spec.ts -
+  // just confirm the control is present and enabled here.
+  await expect(page.getByRole('button', { name: 'Run' })).toBeEnabled();
 });
 
 test('an unknown problem id 404s', async ({ page }) => {
