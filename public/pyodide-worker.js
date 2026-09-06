@@ -18,6 +18,11 @@
 // Source of truth for the runner logic - if this needs to change, this
 // is the only copy (there is no compiled/generated counterpart).
 
+// KeyboardInterrupt is caught separately from every other exception and
+// reported as its own 'timeout' outcome (design.md §6.7/task 24) - the
+// main thread raises it deliberately via the interrupt buffer when a
+// run overruns PYTHON_EXEC_TIMEOUT_MS, so it means something different
+// from a bug in the student's own code.
 const RUNNER_SOURCE = `
 def __run_submission(code, stdin_text):
     import io, contextlib, json, traceback, builtins
@@ -36,6 +41,8 @@ def __run_submission(code, stdin_text):
         with contextlib.redirect_stdout(buf):
             exec(compile(code, '<submission>', 'exec'), {'__name__': '__main__'})
         return json.dumps({'outcome': 'ok', 'stdout': buf.getvalue()})
+    except KeyboardInterrupt:
+        return json.dumps({'outcome': 'timeout', 'stdout': buf.getvalue()})
     except BaseException:
         return json.dumps({
             'outcome': 'error',
@@ -50,11 +57,19 @@ def __run_submission(code, stdin_text):
 // here too, rather than re-fetched via pyodide.globals.get() on every
 // message, so repeated runs don't leak a fresh proxy each time.
 let runnerPromise = null;
+let pyodideInstance = null;
+
+// A Uint8Array view over the SharedArrayBuffer the main thread sends in
+// the 'init' message. Written to only by the main thread (SIGINT on
+// timeout); read/cleared here.
+let interruptArray = null;
 
 function getRunner() {
   if (!runnerPromise) {
     runnerPromise = import('/pyodide/pyodide.mjs').then(async ({ loadPyodide }) => {
       const pyodide = await loadPyodide({ indexURL: '/pyodide/' });
+      pyodideInstance = pyodide;
+      if (interruptArray) pyodide.setInterruptBuffer(interruptArray);
       pyodide.runPython(RUNNER_SOURCE);
       return pyodide.globals.get('__run_submission');
     });
@@ -63,8 +78,21 @@ function getRunner() {
 }
 
 self.onmessage = async (event) => {
-  const { code, input } = event.data;
+  const data = event.data;
+
+  if (data.type === 'init') {
+    interruptArray = new Uint8Array(data.interruptBuffer);
+    if (pyodideInstance) pyodideInstance.setInterruptBuffer(interruptArray);
+    return;
+  }
+
+  const { code, input } = data;
   const runSubmission = await getRunner();
+  // Clear any interrupt left over from a prior run's timeout - the byte
+  // in shared memory doesn't reset itself once Python catches the
+  // KeyboardInterrupt it caused, and a stale 2 would immediately
+  // interrupt every run after the first timeout.
+  if (interruptArray) interruptArray[0] = 0;
   const resultJson = runSubmission(code, input);
   const result = JSON.parse(resultJson);
   self.postMessage({ type: 'result', ...result });

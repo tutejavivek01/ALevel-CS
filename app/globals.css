@@ -937,6 +937,9 @@ svg.fsm text.edge-label {
 .python-output.error {
   border-color: var(--warn);
 }
+.python-output.timeout {
+  border-color: var(--warn);
+}
 .python-output pre {
   font-size: 12px;
   white-space: pre-wrap;

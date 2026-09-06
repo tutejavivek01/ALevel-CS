@@ -11,6 +11,7 @@ import {
 import type { PythonProblem } from '@/lib/db/use-python-problems';
 import { usePyodideWorker } from '@/lib/python/use-pyodide-worker';
 import type { PyodideRunResponse } from '@/lib/python/pyodide-protocol';
+import { PYTHON_EXEC_TIMEOUT_MS } from '@/lib/config';
 
 type Props = {
   problemId: number;
@@ -93,6 +94,11 @@ export function PythonProblemDetail({ problemId, initialProblem, initialTestCase
               </div>
               <pre>{output.traceback}</pre>
             </>
+          )}
+          {output.outcome === 'timeout' && (
+            <p className="ex-feedback no" style={{ marginTop: 8 }}>
+              Timed out after {PYTHON_EXEC_TIMEOUT_MS / 1000}s - check for an infinite loop.
+            </p>
           )}
         </div>
       )}

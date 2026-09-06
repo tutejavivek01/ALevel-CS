@@ -6,9 +6,9 @@
 // within this many days and it isn't yet complete.
 export const NEA_UPCOMING_WINDOW_DAYS = 14;
 
-// requirements.md §8.4 / design.md §6.7 - set when task 24 builds the
-// Pyodide execution timeout.
-// export const PYTHON_EXEC_TIMEOUT_MS = 5000;
+// requirements.md §8.4 / design.md §6.7: how long a submission may run
+// before the main thread writes SIGINT into Pyodide's interrupt buffer.
+export const PYTHON_EXEC_TIMEOUT_MS = 5000;
 
 // requirements.md §5.3 / design.md §6.4: a mastered glossary term
 // becomes eligible to resurface after this many days...

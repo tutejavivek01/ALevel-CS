@@ -1,12 +1,24 @@
 // Message shapes exchanged between the main thread and the Pyodide
 // worker (design.md §6.7's sequence diagram). Kept in a shared module so
 // both sides import the same types instead of duplicating them.
+//
+// public/pyodide-worker.js is a plain, unbundled static file (see its
+// header comment) so it can't import these types directly - it must
+// stay structurally compatible with them by hand.
+export type PyodideInitMessage = {
+  type: 'init';
+  interruptBuffer: SharedArrayBuffer;
+};
+
 export type PyodideRunRequest = {
   type: 'run';
   code: string;
   input: string;
 };
 
+export type PyodideWorkerRequest = PyodideInitMessage | PyodideRunRequest;
+
 export type PyodideRunResponse =
   | { type: 'result'; outcome: 'ok'; stdout: string }
-  | { type: 'result'; outcome: 'error'; stdout: string; traceback: string };
+  | { type: 'result'; outcome: 'error'; stdout: string; traceback: string }
+  | { type: 'result'; outcome: 'timeout'; stdout: string };
