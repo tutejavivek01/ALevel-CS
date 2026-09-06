@@ -34,6 +34,9 @@ yarn-error.log*
 .env*
 !.env.example
 
+# one-time seed script output (real account passwords) - never commit
+.seed-credentials.local.txt
+
 # vercel
 .vercel
 
