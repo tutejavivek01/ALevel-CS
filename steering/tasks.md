@@ -27,7 +27,7 @@ seeding) exist specifically so later tasks don't have to reinvent them.
 - [x] 17. FSM engine
 - [x] 18. FSM exercise UI
 - [x] 19. Glossary drill
-- [ ] 20. Python problems: schema + RLS
+- [x] 20. Python problems: schema + RLS
 - [ ] 21. Python problems: authoring + list UI
 - [ ] 22. Python problems: code editor + static detail page
 - [ ] 23. Pyodide execution: basic Web Worker
