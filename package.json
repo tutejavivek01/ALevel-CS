@@ -13,7 +13,8 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "db:migrate": "node scripts/migrate.mjs",
-    "seed:accounts": "node scripts/seed-accounts.mjs"
+    "seed:accounts": "node scripts/seed-accounts.mjs",
+    "seed:test-accounts": "node scripts/seed-test-accounts.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.6",
