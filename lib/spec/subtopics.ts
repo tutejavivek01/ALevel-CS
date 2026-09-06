@@ -19,3 +19,12 @@ const KNOWN_SUBTOPIC_IDS = new Set(ALL_SUBTOPIC_IDS);
 export function isKnownSubtopicId(id: string): boolean {
   return KNOWN_SUBTOPIC_IDS.has(id);
 }
+
+// Reverses subtopicId() for building human-readable summaries (activity
+// trail, task 12) - returns null for anything not in /lib/spec.
+export function getSubtopicLabel(id: string): string | null {
+  const [topicId, indexStr] = id.split('__');
+  const topic = TOPICS.find((t) => t.id === topicId);
+  const index = Number(indexStr);
+  return topic?.items[index] ?? null;
+}

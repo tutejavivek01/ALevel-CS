@@ -3,6 +3,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { createClient } from './supabase-browser';
 import { useOptimisticMutation } from './use-optimistic-mutation';
+import { logActivity } from './log-activity';
+import { getSubtopicLabel } from '@/lib/spec';
 
 export type SubtopicStatusValue =
   | 'not-started'
@@ -69,6 +71,13 @@ export function useSetSubtopicStatus(topicId: string) {
         .from('subtopic_status_history')
         .insert({ subtopic_id: subtopicId, status, changed_by: user.id });
       if (historyError) throw historyError;
+
+      const label = getSubtopicLabel(subtopicId) ?? subtopicId;
+      await logActivity({
+        eventType: 'subtopic_status_changed',
+        summary: `marked "${label}" as ${status}`,
+        targetRef: subtopicId,
+      });
     },
     updater: (previous, variables) => {
       const map = (previous as SubtopicStatusMap | undefined) ?? {};

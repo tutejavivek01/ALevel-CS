@@ -18,7 +18,11 @@
       "Bash(nslookup db.exxvkimkkkkmmnhbjprr.supabase.co)",
       "Bash(nslookup -type=AAAA db.exxvkimkkkkmmnhbjprr.supabase.co)",
       "Bash(node *)",
-      "Bash(xargs grep -l \"IBM Plex\")"
+      "Bash(xargs grep -l \"IBM Plex\")",
+      "Bash(powershell -NoProfile -Command \"Stop-Process -Id 18632,42480 -Force -ErrorAction SilentlyContinue; Start-Sleep -Seconds 1; Get-Process -Name node -ErrorAction SilentlyContinue | Select-Object Id, StartTime\")",
+      "Bash(powershell -NoProfile -Command \"try { Get-Process -Name node -ErrorAction Stop | Select-Object Id, StartTime } catch { Write-Output 'no node processes' }\")",
+      "Bash(powershell -NoProfile -Command \"try { Get-Process -Name node -ErrorAction Stop | Stop-Process -Force } catch {}\")",
+      "Bash(rm -rf .next)"
     ]
   }
 }

@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { Card } from './Card';
 import { ProgressRing } from './ProgressRing';
+import { ActivityFeed } from './ActivityFeed';
 import { useAllSubtopicStatuses } from '@/lib/db/use-all-subtopic-statuses';
 import { overallProgress, topicProgress } from '@/lib/progress';
 import { TOPICS } from '@/lib/spec';
@@ -68,6 +69,8 @@ export function Dashboard() {
           })}
         </div>
       </Card>
+
+      <ActivityFeed />
     </div>
   );
 }

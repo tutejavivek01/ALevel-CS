@@ -3,6 +3,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { createClient } from './supabase-browser';
 import { useOptimisticMutation } from './use-optimistic-mutation';
+import { logActivity } from './log-activity';
+import { getSubtopicLabel } from '@/lib/spec';
 
 export type SubtopicFlag = {
   id: number;
@@ -59,6 +61,13 @@ export function useAddSubtopicFlag(topicId: string) {
         .from('subtopic_flags')
         .insert({ subtopic_id: subtopicId, body, created_by: user.id });
       if (error) throw error;
+
+      const label = getSubtopicLabel(subtopicId) ?? subtopicId;
+      await logActivity({
+        eventType: 'subtopic_flagged',
+        summary: `flagged "${label}"`,
+        targetRef: subtopicId,
+      });
     },
     updater: (previous, variables) => {
       const map = (previous as SubtopicFlagsMap | undefined) ?? {};

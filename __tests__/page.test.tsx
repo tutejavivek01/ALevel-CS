@@ -9,6 +9,9 @@ import DashboardPage from '../app/(app)/page';
 vi.mock('@/lib/db/use-all-subtopic-statuses', () => ({
   useAllSubtopicStatuses: () => ({ data: {}, isLoading: false }),
 }));
+vi.mock('@/lib/db/use-activity-feed', () => ({
+  useActivityFeed: () => ({ data: [], isLoading: false }),
+}));
 
 test('dashboard page renders the specification map with all 13 topics', () => {
   render(<DashboardPage />);

@@ -4,6 +4,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from './supabase-browser';
 import { useOptimisticMutation } from './use-optimistic-mutation';
 import { useRealtimeTables } from './use-realtime-tables';
+import { logActivity } from './log-activity';
+import { getTopicById } from '@/lib/spec';
 
 export type ResourceLink = {
   id: number;
@@ -61,6 +63,13 @@ export function useAddResourceLink(topicId: string) {
         .from('resource_links')
         .insert({ topic_id: topicId, url, label, created_by: user.id });
       if (error) throw error;
+
+      const topicTitle = getTopicById(topicId)?.title ?? topicId;
+      await logActivity({
+        eventType: 'resource_link_added',
+        summary: `added a link "${label}" to ${topicTitle}`,
+        targetRef: topicId,
+      });
     },
     updater: (previous, variables) => {
       const links = (previous as ResourceLink[] | undefined) ?? [];

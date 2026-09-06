@@ -19,7 +19,7 @@ seeding) exist specifically so later tasks don't have to reinvent them.
 - [x] 9. Status history + supporter flags
 - [x] 10. Dashboard overview
 - [x] 11. Resource hub
-- [ ] 12. Activity trail
+- [x] 12. Activity trail
 - [ ] 13. NEA tracker: schema + CRUD
 - [ ] 14. NEA tracker: deadlines + marks estimate
 - [ ] 15. Generalized stepped-exercise interface

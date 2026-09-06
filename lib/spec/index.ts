@@ -3,6 +3,7 @@ export { RES, aqa, type Resource } from './resources';
 export {
   subtopicId,
   isKnownSubtopicId,
+  getSubtopicLabel,
   ALL_SUBTOPIC_IDS,
 } from './subtopics';
 
