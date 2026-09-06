@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { NavRail } from './NavRail';
-import { ProgressRing } from './ProgressRing';
+import { OverallProgress } from './OverallProgress';
 import { AccountBadge } from './AccountBadge';
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -15,12 +15,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </div>
         <div className="overall">
-          {/* Placeholder until task 10 wires this to real subtopic_status data */}
-          <ProgressRing percent={0} size={44} stroke={5} />
-          <div>
-            <div className="num">0%</div>
-            <div className="lbl">0/0 confident</div>
-          </div>
+          <OverallProgress />
           <AccountBadge />
         </div>
       </header>

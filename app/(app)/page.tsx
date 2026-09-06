@@ -1,10 +1,5 @@
-import { Card } from '@/components/Card';
+import { Dashboard } from '@/components/Dashboard';
 
 export default function DashboardPage() {
-  return (
-    <Card>
-      <h3 className="section-title">Dashboard</h3>
-      <p>Overview content lands here in task 10.</p>
-    </Card>
-  );
+  return <Dashboard />;
 }

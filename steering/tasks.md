@@ -17,7 +17,7 @@ seeding) exist specifically so later tasks don't have to reinvent them.
 - [x] 7. Spec content migration
 - [x] 8. Syllabus tracker vertical slice
 - [x] 9. Status history + supporter flags
-- [ ] 10. Dashboard overview
+- [x] 10. Dashboard overview
 - [ ] 11. Resource hub
 - [ ] 12. Activity trail
 - [ ] 13. NEA tracker: schema + CRUD
