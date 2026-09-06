@@ -13,7 +13,7 @@ seeding) exist specifically so later tasks don't have to reinvent them.
 - [x] 3. Auth backend: profiles + RLS foundation
 - [x] 4. Auth frontend: login + route protection
 - [x] 5. Design system port + app shell
-- [ ] 6. Shared data layer: optimistic mutations + Realtime
+- [x] 6. Shared data layer: optimistic mutations + Realtime
 - [ ] 7. Spec content migration
 - [ ] 8. Syllabus tracker vertical slice
 - [ ] 9. Status history + supporter flags

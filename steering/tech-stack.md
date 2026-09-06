@@ -52,6 +52,16 @@ avoid taking on execution of untrusted code as server-side infrastructure
 extra to operate or secure. Trade-off accepted: a one-time ~10MB+ download
 the first time the Python Practice section is opened.
 
+## Addition (2026-09-06): TanStack Query for the shared mutation pattern
+
+Decided in task 6 (design.md §4/§9.6, as flagged): every mutating hook
+across the app needs the same optimistic-update → write → rollback-and
+-surface-retry-on-failure shape (principles.md §1). TanStack Query's
+`useMutation` (`onMutate`/`onError`/`onSettled`) gives that shape directly
+rather than hand-rolling it once per feature, and its query cache is also
+what `useRealtimeTable` invalidates into when the *other* account's
+change arrives. Small dependency, but it's doing real, repeated work.
+
 ## Open follow-ups (flagging, not blocking)
 
 - You chose a full account system over a shared link. Worth confirming:
