@@ -31,6 +31,13 @@ test('an infinite loop reports timed out within ~5s without freezing the tab, an
     .select()
     .single();
 
+  await supporter.from('python_test_cases').insert({
+    problem_id: problem!.id,
+    position: 0,
+    input: '',
+    expected_output: 'still alive\n',
+  });
+
   await page.goto('/login');
   await page.getByLabel('Email').fill(process.env.E2E_STUDENT_EMAIL!);
   await page.getByLabel('Password').fill(process.env.E2E_STUDENT_PASSWORD!);
@@ -66,6 +73,6 @@ test('an infinite loop reports timed out within ~5s without freezing the tab, an
   await page.keyboard.press('Control+A');
   await page.keyboard.type('print("still alive")');
   await page.getByRole('button', { name: 'Run' }).click();
-  await expect(page.locator('.python-output.ok')).toBeVisible({ timeout: 10000 });
-  await expect(page.locator('.python-output')).toContainText('still alive');
+  await expect(page.locator('.python-output.pass')).toBeVisible({ timeout: 10000 });
+  await expect(page.locator('.python-output')).toContainText('All tests passed');
 });

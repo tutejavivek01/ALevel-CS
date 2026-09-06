@@ -32,6 +32,13 @@ test('a correct program shows its output, a buggy one shows a real traceback, an
     .select()
     .single();
 
+  await supporter.from('python_test_cases').insert({
+    problem_id: problem!.id,
+    position: 0,
+    input: '',
+    expected_output: 'hello world\n',
+  });
+
   await page.goto('/login');
   await page.getByLabel('Email').fill(process.env.E2E_STUDENT_EMAIL!);
   await page.getByLabel('Password').fill(process.env.E2E_STUDENT_PASSWORD!);
@@ -52,8 +59,9 @@ test('a correct program shows its output, a buggy one shows a real traceback, an
   await page.getByRole('button', { name: 'Run' }).click();
 
   // Generous timeout - this run pays Pyodide's one-time load/init cost.
-  await expect(page.locator('.python-output.ok')).toBeVisible({ timeout: 45000 });
-  await expect(page.locator('.python-output')).toContainText('hello world');
+  await expect(page.locator('.python-output.pass')).toBeVisible({ timeout: 45000 });
+  await expect(page.locator('.python-output')).toContainText('All tests passed');
+  await expect(page.locator('.python-output')).toContainText('Test 1: passed');
 
   await editor.click();
   await page.keyboard.press('Control+A');
