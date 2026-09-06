@@ -4,9 +4,18 @@ import Link from 'next/link';
 import { Card } from './Card';
 import { usePythonProblems } from '@/lib/db/use-python-problems';
 import { useCurrentProfile } from '@/lib/db/use-current-profile';
+import { usePythonReviewStatuses } from '@/lib/db/use-python-review-statuses';
+
+const STATUS_LABEL: Record<string, string> = {
+  'not-started': 'Not started',
+  attempted: 'Attempted',
+  'submitted-for-review': 'Submitted for review',
+  reviewed: 'Reviewed',
+};
 
 export function PythonProblemList() {
   const { data: problems, isLoading } = usePythonProblems();
+  const { data: reviewStatuses } = usePythonReviewStatuses();
   const { profile } = useCurrentProfile();
 
   return (
@@ -29,19 +38,22 @@ export function PythonProblemList() {
       )}
 
       <div className="python-list">
-        {(problems ?? []).map((problem) => (
-          <Link key={problem.id} href={`/python/${problem.id}`} className="python-row">
-            <div>
-              <div className="title">{problem.title}</div>
-              {problem.due_date && (
-                <div className="due">Due {new Date(problem.due_date).toLocaleDateString()}</div>
-              )}
-            </div>
-            {/* Real derived status (not-started/attempted/submitted-for-review/
-                reviewed) lands in task 26 - placeholder until then. */}
-            <span className="status-badge">Not started</span>
-          </Link>
-        ))}
+        {(problems ?? []).map((problem) => {
+          const status = reviewStatuses?.[problem.id] ?? 'not-started';
+          return (
+            <Link key={problem.id} href={`/python/${problem.id}`} className="python-row">
+              <div>
+                <div className="title">{problem.title}</div>
+                {problem.due_date && (
+                  <div className="due">Due {new Date(problem.due_date).toLocaleDateString()}</div>
+                )}
+              </div>
+              <span className="status-badge" data-status={status}>
+                {STATUS_LABEL[status]}
+              </span>
+            </Link>
+          );
+        })}
       </div>
     </Card>
   );

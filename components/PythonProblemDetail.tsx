@@ -10,6 +10,13 @@ import {
 } from '@/lib/db/use-python-problem';
 import type { PythonProblem } from '@/lib/db/use-python-problems';
 import { usePythonSubmissions, useSubmitPythonCode } from '@/lib/db/use-python-submissions';
+import {
+  usePythonReviews,
+  useAddPythonReview,
+  useSubmitForReview,
+} from '@/lib/db/use-python-reviews';
+import { useCurrentProfile } from '@/lib/db/use-current-profile';
+import { deriveReviewStatus } from '@/lib/exercises/python-review-status';
 import { PYTHON_EXEC_TIMEOUT_MS } from '@/lib/config';
 
 type Props = {
@@ -25,16 +32,60 @@ const OVERALL_RESULT_LABEL: Record<string, string> = {
   error: 'Error',
 };
 
+const STATUS_LABEL: Record<string, string> = {
+  'not-started': 'Not started',
+  attempted: 'Attempted',
+  'submitted-for-review': 'Submitted for review',
+  reviewed: 'Reviewed',
+};
+
+function ReviewForm({ onAdd }: { onAdd: (body: string) => void }) {
+  const [draft, setDraft] = useState('');
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        const trimmed = draft.trim();
+        if (trimmed) {
+          onAdd(trimmed);
+          setDraft('');
+        }
+      }}
+      style={{ display: 'flex', gap: 8, marginTop: 8 }}
+    >
+      <input
+        type="text"
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        placeholder="Leave feedback…"
+        style={{ flex: 1 }}
+      />
+      <button type="submit" className="btn2 alt">
+        Add review
+      </button>
+    </form>
+  );
+}
+
 export function PythonProblemDetail({ problemId, initialProblem, initialTestCases }: Props) {
   const { data: problem } = usePythonProblem(problemId, initialProblem);
   const { data: testCases } = usePythonTestCases(problemId, initialTestCases);
   const { data: submissions } = usePythonSubmissions(problemId);
+  const { data: reviews } = usePythonReviews(problemId);
+  const { profile } = useCurrentProfile();
   const [code, setCode] = useState(initialProblem.starter_code ?? '');
   const submit = useSubmitPythonCode(problemId, testCases ?? []);
+  const submitForReview = useSubmitForReview(problemId);
+  const addReview = useAddPythonReview(problemId);
 
   if (!problem) return null;
 
   const result = submit.data;
+  const status = deriveReviewStatus({
+    hasSubmissions: (submissions ?? []).length > 0,
+    submittedForReviewAt: problem.submitted_for_review_at,
+    latestReviewAt: (reviews ?? [])[0]?.created_at ?? null,
+  });
 
   return (
     <Card>
@@ -48,6 +99,9 @@ export function PythonProblemDetail({ problemId, initialProblem, initialTestCase
             </span>
           )}
         </div>
+        <span className="status-badge" data-status={status}>
+          {STATUS_LABEL[status]}
+        </span>
       </div>
 
       <p className="blurb">{problem.description}</p>
@@ -129,6 +183,34 @@ export function PythonProblemDetail({ problemId, initialProblem, initialTestCase
           </div>
         ))}
       </div>
+
+      {profile?.role === 'student' && (
+        <div className="ex-actions">
+          <button
+            className="btn2 alt"
+            onClick={() => submitForReview.mutate()}
+            disabled={submitForReview.isPending || (submissions ?? []).length === 0}
+          >
+            Submit for review
+          </button>
+        </div>
+      )}
+
+      <h3 className="section-title" style={{ marginTop: 20 }}>
+        Reviews
+      </h3>
+      {(reviews ?? []).length === 0 && <p className="empty-note">No reviews yet.</p>}
+      {(reviews ?? []).map((review) => (
+        <p key={review.id} style={{ fontSize: 12.5, margin: '4px 0' }}>
+          <span style={{ color: 'var(--ink-dim)' }}>{review.body}</span>{' '}
+          <span className="mono" style={{ color: 'var(--muted)', fontSize: 11 }}>
+            {new Date(review.created_at).toLocaleString()}
+          </span>
+        </p>
+      ))}
+      {profile?.role === 'supporter' && (
+        <ReviewForm onAdd={(body) => addReview.mutate({ body })} />
+      )}
     </Card>
   );
 }
