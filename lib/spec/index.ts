@@ -6,6 +6,12 @@ export {
   getSubtopicLabel,
   ALL_SUBTOPIC_IDS,
 } from './subtopics';
+export {
+  NEA_SECTIONS,
+  NEA_TOTAL_MARKS,
+  getNeaSectionById,
+  type NeaSection,
+} from './nea';
 
 import { TOPICS, type Topic } from './topics';
 
