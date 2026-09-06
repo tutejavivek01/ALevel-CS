@@ -46,19 +46,41 @@ test('a status change is attributed to the correct account in history', async ({
   );
   await page.goto(TOPIC_PATH);
 
+  // This subtopic has accumulated history rows across many prior test
+  // runs (this file has been run dozens of times) - "most recent by
+  // changed_at" isn't specific enough to prove THIS click produced a
+  // row, only that a stale cutoff time excludes every leftover one.
+  const testStartedAt = new Date().toISOString();
+
   const row = checkRow(page, HISTORY_ITEM_LABEL);
   await row.getByRole('button', { name: 'Practising' }).click();
   await expect(row.getByRole('button', { name: 'Practising' })).toHaveClass(/on/);
 
-  // "Last touched" only renders once useLastTouched's query reflects the
-  // history row - waiting for it here means the write below is settled,
-  // not just optimistically applied in the UI.
-  await expect(row.getByText(/Last touched/)).toBeVisible();
+  // "Last touched" only renders once useLastTouched's query reflects a
+  // history row - but that could be an old row already visible before
+  // this click. Poll the DB directly (scoped to after testStartedAt)
+  // instead of trusting the UI text as the completion signal.
+  await expect
+    .poll(
+      async () => {
+        const { data } = await supabase
+          .from('subtopic_status_history')
+          .select('status, changed_by')
+          .eq('subtopic_id', 'data-structures__2')
+          .gte('changed_at', testStartedAt)
+          .order('changed_at', { ascending: false })
+          .limit(1);
+        return data?.length ?? 0;
+      },
+      { timeout: 10000 }
+    )
+    .toBe(1);
 
   const { data: history, error } = await supabase
     .from('subtopic_status_history')
     .select('status, changed_by')
     .eq('subtopic_id', 'data-structures__2')
+    .gte('changed_at', testStartedAt)
     .order('changed_at', { ascending: false })
     .limit(1);
 

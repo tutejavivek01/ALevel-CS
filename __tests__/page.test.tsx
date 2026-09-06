@@ -12,6 +12,10 @@ vi.mock('@/lib/db/use-all-subtopic-statuses', () => ({
 vi.mock('@/lib/db/use-activity-feed', () => ({
   useActivityFeed: () => ({ data: [], isLoading: false }),
 }));
+vi.mock('@/lib/db/use-nea-state', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/db/use-nea-state')>();
+  return { ...actual, useNeaState: () => ({ data: {}, isLoading: false }) };
+});
 
 test('dashboard page renders the specification map with all 13 topics', () => {
   render(<DashboardPage />);

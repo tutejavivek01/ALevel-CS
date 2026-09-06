@@ -21,7 +21,7 @@ seeding) exist specifically so later tasks don't have to reinvent them.
 - [x] 11. Resource hub
 - [x] 12. Activity trail
 - [x] 13. NEA tracker: schema + CRUD
-- [ ] 14. NEA tracker: deadlines + marks estimate
+- [x] 14. NEA tracker: deadlines + marks estimate
 - [ ] 15. Generalized stepped-exercise interface
 - [ ] 16. Trace-table exercises
 - [ ] 17. FSM engine

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Card } from './Card';
 import { ProgressRing } from './ProgressRing';
 import { ActivityFeed } from './ActivityFeed';
+import { NeaDeadlineBanner } from './NeaDeadlineBanner';
 import { useAllSubtopicStatuses } from '@/lib/db/use-all-subtopic-statuses';
 import { overallProgress, topicProgress } from '@/lib/progress';
 import { TOPICS } from '@/lib/spec';
@@ -47,6 +48,8 @@ export function Dashboard() {
           <div className="l">Specification areas (4.1–4.13)</div>
         </div>
       </div>
+
+      <NeaDeadlineBanner />
 
       <Card>
         <h3 className="section-title">Specification map</h3>

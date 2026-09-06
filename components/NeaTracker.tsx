@@ -15,6 +15,7 @@ import {
 import { neaNotesQueryKey, useAddNeaNote, useNeaNotes } from '@/lib/db/use-nea-notes';
 import { useProfiles } from '@/lib/db/use-profiles';
 import { useRealtimeTables } from '@/lib/db/use-realtime-tables';
+import { neaMarksWorthComplete } from '@/lib/nea-progress';
 
 const NEA_STATUS_OPTIONS: NeaStatusValue[] = [
   'not-started',
@@ -69,6 +70,7 @@ export function NeaTracker() {
 
   const nameById = new Map((profiles ?? []).map((p) => [p.id, p.display_name]));
   const safeStateMap = stateMap ?? {};
+  const marksComplete = neaMarksWorthComplete(safeStateMap);
 
   return (
     <Card>
@@ -77,6 +79,12 @@ export function NeaTracker() {
           <div className="ref">§ 4.14</div>
           <h2>Non-Exam Assessment</h2>
           <span className="unit-badge">20% of the A-level &middot; {NEA_TOTAL_MARKS} marks</span>
+        </div>
+        <div className="nea-total">
+          <span className="big">
+            {stateLoading ? '…' : `≥ ${marksComplete}/${NEA_TOTAL_MARKS}`}
+          </span>
+          <span>marks-worth complete</span>
         </div>
       </div>
 
