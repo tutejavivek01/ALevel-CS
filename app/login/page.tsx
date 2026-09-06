@@ -33,36 +33,62 @@ export default function LoginPage() {
   }
 
   return (
-    <main>
-      <h1>Sign in</h1>
-      <form onSubmit={handleSubmit}>
-        <div>
-          <label htmlFor="email">Email</label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        </div>
-        <div>
-          <label htmlFor="password">Password</label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </div>
-        {error && <p role="alert">{error}</p>}
-        <button type="submit" disabled={pending}>
-          {pending ? 'Signing in…' : 'Sign in'}
-        </button>
-      </form>
+    <main style={{ maxWidth: 360, margin: '80px auto', padding: '0 24px' }}>
+      <div className="card">
+        <h1>Sign in</h1>
+        <form onSubmit={handleSubmit} style={{ marginTop: 18 }}>
+          <div style={{ marginBottom: 14 }}>
+            <label htmlFor="email">Email</label>
+            <br />
+            <input
+              id="email"
+              name="email"
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              style={{
+                width: '100%',
+                marginTop: 6,
+                padding: '8px 10px',
+                borderRadius: 7,
+                border: '1px solid var(--border)',
+                background: 'var(--surface)',
+                color: 'var(--ink)',
+              }}
+            />
+          </div>
+          <div style={{ marginBottom: 14 }}>
+            <label htmlFor="password">Password</label>
+            <br />
+            <input
+              id="password"
+              name="password"
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              style={{
+                width: '100%',
+                marginTop: 6,
+                padding: '8px 10px',
+                borderRadius: 7,
+                border: '1px solid var(--border)',
+                background: 'var(--surface)',
+                color: 'var(--ink)',
+              }}
+            />
+          </div>
+          {error && (
+            <p role="alert" style={{ color: 'var(--warn)', fontSize: 13 }}>
+              {error}
+            </p>
+          )}
+          <button type="submit" disabled={pending} className="btn2">
+            {pending ? 'Signing in…' : 'Sign in'}
+          </button>
+        </form>
+      </div>
     </main>
   );
 }
