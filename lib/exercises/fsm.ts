@@ -10,17 +10,17 @@ export type FsmExerciseData = SteppedExercise<FsmTraceStep> & {
 
 const endsIn01Fsm: Fsm = {
   states: [
-    { id: 'A', start: true },
-    { id: 'B' },
-    { id: 'C', accept: true },
+    { id: 'A', start: true, x: 70, y: 90 },
+    { id: 'B', x: 210, y: 90 },
+    { id: 'C', accept: true, x: 350, y: 90 },
   ],
   edges: [
-    { from: 'A', to: 'A', input: '1' },
+    { from: 'A', to: 'A', input: '1', self: true },
     { from: 'A', to: 'B', input: '0' },
-    { from: 'B', to: 'B', input: '0' },
+    { from: 'B', to: 'B', input: '0', self: true },
     { from: 'B', to: 'C', input: '1' },
-    { from: 'C', to: 'A', input: '1' },
-    { from: 'C', to: 'B', input: '0' },
+    { from: 'C', to: 'A', input: '1', curveUp: true },
+    { from: 'C', to: 'B', input: '0', below: true },
   ],
 };
 
@@ -41,14 +41,14 @@ export const endsIn01: FsmExerciseData = {
 
 const turnstileFsm: Fsm = {
   states: [
-    { id: 'Locked', start: true },
-    { id: 'Unlocked' },
+    { id: 'Locked', start: true, x: 110, y: 90 },
+    { id: 'Unlocked', x: 320, y: 90 },
   ],
   edges: [
     { from: 'Locked', to: 'Unlocked', input: 'coin', output: 'unlock' },
-    { from: 'Unlocked', to: 'Locked', input: 'push', output: 'lock' },
-    { from: 'Locked', to: 'Locked', input: 'push', output: '–' },
-    { from: 'Unlocked', to: 'Unlocked', input: 'coin', output: '–' },
+    { from: 'Unlocked', to: 'Locked', input: 'push', output: 'lock', below: true },
+    { from: 'Locked', to: 'Locked', input: 'push', output: '–', self: true },
+    { from: 'Unlocked', to: 'Unlocked', input: 'coin', output: '–', self: true },
   ],
 };
 

@@ -25,7 +25,7 @@ seeding) exist specifically so later tasks don't have to reinvent them.
 - [x] 15. Generalized stepped-exercise interface
 - [x] 16. Trace-table exercises
 - [x] 17. FSM engine
-- [ ] 18. FSM exercise UI
+- [x] 18. FSM exercise UI
 - [ ] 19. Glossary drill
 - [ ] 20. Python problems: schema + RLS
 - [ ] 21. Python problems: authoring + list UI

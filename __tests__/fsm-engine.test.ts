@@ -47,7 +47,7 @@ describe('traceFsm: turnstile (Mealy, with output)', () => {
 
 describe('traceFsm: error handling', () => {
   test('throws if the FSM has no start state', () => {
-    const brokenFsm: Fsm = { states: [{ id: 'X' }], edges: [] };
+    const brokenFsm: Fsm = { states: [{ id: 'X', x: 0, y: 0 }], edges: [] };
     expect(() => traceFsm(brokenFsm, ['1'])).toThrow('no start state');
   });
 

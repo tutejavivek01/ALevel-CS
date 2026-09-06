@@ -5,6 +5,11 @@ export type FsmState = {
   id: string;
   start?: boolean;
   accept?: boolean;
+  // Layout position for the SVG diagram (task 18) - kept on the same
+  // type as the logic rather than a parallel structure, so a state can
+  // never be added to one and forgotten in the other.
+  x: number;
+  y: number;
 };
 
 // `input` is a token, not necessarily a single character - the turnstile
@@ -16,6 +21,12 @@ export type FsmEdge = {
   to: string;
   input: string;
   output?: string; // Mealy machines only; absent means no output on this edge.
+  // Diagram-only layout hints (task 18). The edge's label is derived
+  // from input/output at render time, not stored here, so there's only
+  // one source of truth for what an edge actually does.
+  self?: boolean;
+  curveUp?: boolean;
+  below?: boolean;
 };
 
 export type Fsm = {
