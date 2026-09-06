@@ -62,6 +62,17 @@ rather than hand-rolling it once per feature, and its query cache is also
 what `useRealtimeTable` invalidates into when the *other* account's
 change arrives. Small dependency, but it's doing real, repeated work.
 
+## Addition (2026-09-06): @uiw/react-codemirror for the Python editor
+
+Task 22 needed a concrete package, not just "CodeMirror 6" (design.md
+§6.7). Used `@uiw/react-codemirror` + `@codemirror/lang-python` rather
+than wiring the lower-level `@codemirror/state`/`@codemirror/view`
+packages up to React by hand — it's a thin, widely-used wrapper (not a
+heavier abstraction like Monaco's own React bindings), so it keeps the
+"smaller bundle than Monaco" reasoning from design.md intact while
+avoiding hand-rolling view lifecycle/controlled-value wiring that the
+wrapper already gets right.
+
 ## Open follow-ups (flagging, not blocking)
 
 - You chose a full account system over a shared link. Worth confirming:
