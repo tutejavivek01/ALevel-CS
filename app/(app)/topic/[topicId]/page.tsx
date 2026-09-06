@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { Card } from '@/components/Card';
 import { TopicChecklist } from '@/components/TopicChecklist';
+import { PersonalResourceLinks } from '@/components/PersonalResourceLinks';
 import { getTopicById } from '@/lib/spec';
 
 export default async function TopicPage(props: PageProps<'/topic/[topicId]'>) {
@@ -41,6 +42,8 @@ export default async function TopicPage(props: PageProps<'/topic/[topicId]'>) {
           </a>
         ))}
       </div>
+
+      <PersonalResourceLinks topicId={topic.id} />
     </Card>
   );
 }

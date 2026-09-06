@@ -18,7 +18,7 @@ seeding) exist specifically so later tasks don't have to reinvent them.
 - [x] 8. Syllabus tracker vertical slice
 - [x] 9. Status history + supporter flags
 - [x] 10. Dashboard overview
-- [ ] 11. Resource hub
+- [x] 11. Resource hub
 - [ ] 12. Activity trail
 - [ ] 13. NEA tracker: schema + CRUD
 - [ ] 14. NEA tracker: deadlines + marks estimate
