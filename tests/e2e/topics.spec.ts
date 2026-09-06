@@ -20,7 +20,12 @@ test('all 13 topics render their correct title and ref', async ({ page }) => {
     await page.goto(`/topic/${topic.id}`);
     await expect(page.getByRole('heading', { level: 2 })).toHaveText(topic.title);
     await expect(page.getByText(`§ ${topic.ref}`)).toBeVisible();
-    await expect(page.getByText(`Checklist — ${topic.items.length} sub-topics`)).toBeVisible();
+    // Not asserting an exact count here: the e2e accounts' subtopic
+    // statuses are real, persisted DB rows other tests (task 8+) also
+    // write to, so only the format/denominator is guaranteed stable.
+    await expect(
+      page.getByText(new RegExp(`Checklist — \\d+/${topic.items.length} confident`))
+    ).toBeVisible();
   }
 });
 
