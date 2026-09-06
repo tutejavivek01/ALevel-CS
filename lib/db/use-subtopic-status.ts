@@ -1,9 +1,8 @@
 'use client';
 
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { createClient } from './supabase-browser';
 import { useOptimisticMutation } from './use-optimistic-mutation';
-import { useRealtimeTable } from './use-realtime-table';
 
 export type SubtopicStatusValue =
   | 'not-started'
@@ -13,7 +12,10 @@ export type SubtopicStatusValue =
 
 export type SubtopicStatusMap = Record<string, SubtopicStatusValue>;
 
-function queryKeyFor(topicId: string) {
+// Exported so callers can invalidate it after a realtime event - see
+// components/TopicChecklist.tsx's single combined useRealtimeTables call
+// (lib/db/use-realtime-tables.ts) for why this isn't subscribed here.
+export function subtopicStatusQueryKey(topicId: string) {
   return ['subtopic-status', topicId] as const;
 }
 
@@ -32,31 +34,15 @@ async function fetchStatuses(topicId: string): Promise<SubtopicStatusMap> {
   return map;
 }
 
-// Reads are scoped per topic (only the rows that topic's page needs), but
-// the Realtime subscription is on the whole table - postgres_changes
-// doesn't support a LIKE filter, only exact-match column filters, and
-// there's no shared "topic_id" column to filter on since subtopic_id is a
-// single derived string. Invalidating on every change is cheap enough at
-// this scale (a few hundred rows, two accounts) not to be worth a
-// different data-modelling choice just to enable a filtered subscription.
 export function useSubtopicStatuses(topicId: string) {
-  const queryClient = useQueryClient();
-  const queryKey = queryKeyFor(topicId);
-
-  const query = useQuery({
-    queryKey,
+  return useQuery({
+    queryKey: subtopicStatusQueryKey(topicId),
     queryFn: () => fetchStatuses(topicId),
   });
-
-  useRealtimeTable('subtopic_status', () => {
-    queryClient.invalidateQueries({ queryKey });
-  });
-
-  return query;
 }
 
 export function useSetSubtopicStatus(topicId: string) {
-  const queryKey = queryKeyFor(topicId);
+  const queryKey = subtopicStatusQueryKey(topicId);
 
   return useOptimisticMutation<
     { subtopicId: string; status: SubtopicStatusValue },
@@ -74,6 +60,15 @@ export function useSetSubtopicStatus(topicId: string) {
         .from('subtopic_status')
         .upsert({ subtopic_id: subtopicId, status, updated_by: user.id });
       if (error) throw error;
+
+      // Same request, not a DB trigger (tasks.md task 9) - a real but
+      // accepted gap: if this second write fails after the first
+      // succeeds, the status change itself still stands, just without a
+      // history row for it.
+      const { error: historyError } = await supabase
+        .from('subtopic_status_history')
+        .insert({ subtopic_id: subtopicId, status, changed_by: user.id });
+      if (historyError) throw historyError;
     },
     updater: (previous, variables) => {
       const map = (previous as SubtopicStatusMap | undefined) ?? {};

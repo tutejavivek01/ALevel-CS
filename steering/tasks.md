@@ -16,7 +16,7 @@ seeding) exist specifically so later tasks don't have to reinvent them.
 - [x] 6. Shared data layer: optimistic mutations + Realtime
 - [x] 7. Spec content migration
 - [x] 8. Syllabus tracker vertical slice
-- [ ] 9. Status history + supporter flags
+- [x] 9. Status history + supporter flags
 - [ ] 10. Dashboard overview
 - [ ] 11. Resource hub
 - [ ] 12. Activity trail
