@@ -23,7 +23,7 @@ seeding) exist specifically so later tasks don't have to reinvent them.
 - [x] 13. NEA tracker: schema + CRUD
 - [x] 14. NEA tracker: deadlines + marks estimate
 - [x] 15. Generalized stepped-exercise interface
-- [ ] 16. Trace-table exercises
+- [x] 16. Trace-table exercises
 - [ ] 17. FSM engine
 - [ ] 18. FSM exercise UI
 - [ ] 19. Glossary drill

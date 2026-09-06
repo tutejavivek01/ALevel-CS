@@ -13,6 +13,12 @@ export interface SteppedExercise<Step extends StepValues = StepValues> {
   // typing so a component can iterate them without knowing Step's shape.
   fieldKeys: Array<keyof Step & string>;
   fieldLabels?: Partial<Record<keyof Step & string, string>>;
+  // A subset of fieldKeys shown as read-only context (e.g. a trace
+  // table's iteration number, or the loop variable's already-known
+  // value) rather than an editable, checked input. Surfaced by porting
+  // the prototype's trace tables (task 16), which mix both in the same
+  // row. Not required for exercises with nothing to show as given.
+  givenKeys?: Array<keyof Step & string>;
   // Computes the correct value for every field of every step. Takes no
   // arguments - each concrete exercise (a fixed trace-table snippet, or
   // an FSM + a specific input string) already has everything it needs
