@@ -1,0 +1,1092 @@
+<!doctype html>
+<title>Spec Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root{
+    --bg:#eef1f6;
+    --surface:#ffffff;
+    --surface-2:#e4e9f1;
+    --ink:#151e2c;
+    --ink-dim:#54627a;
+    --border:#d3dae5;
+    --accent:#2b4c8c;
+    --accent-ink:#ffffff;
+    --accent-soft:#e2e9f7;
+    --good:#227a54;
+    --good-soft:#e0f2e8;
+    --learn:#8256c9;
+    --learn-soft:#ece3f9;
+    --warn:#b5761e;
+    --warn-soft:#f8ecd8;
+    --muted:#93a0b3;
+    --muted-soft:#e9ecf2;
+    --code-bg:#141d2b;
+    --code-ink:#dbe5f5;
+    --code-accent:#8fb2ff;
+    --font-body:'IBM Plex Sans',system-ui,sans-serif;
+    --font-mono:'IBM Plex Mono',ui-monospace,monospace;
+    --shadow:0 1px 2px rgba(21,30,44,.06),0 6px 20px -8px rgba(21,30,44,.12);
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --bg:#0e141f;
+      --surface:#161f2e;
+      --surface-2:#1d2839;
+      --ink:#e8edf6;
+      --ink-dim:#a2aec2;
+      --border:#2a374b;
+      --accent:#7fa2f0;
+      --accent-ink:#0e141f;
+      --accent-soft:#233254;
+      --good:#4fbf8f;
+      --good-soft:#173327;
+      --learn:#b498eb;
+      --learn-soft:#2b2144;
+      --warn:#e0ab5c;
+      --warn-soft:#3a2c12;
+      --muted:#71809a;
+      --muted-soft:#1d2738;
+      --code-bg:#0a1018;
+      --code-ink:#cfdcf2;
+      --code-accent:#9fc0ff;
+      --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px -10px rgba(0,0,0,.5);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0e141f;
+    --surface:#161f2e;
+    --surface-2:#1d2839;
+    --ink:#e8edf6;
+    --ink-dim:#a2aec2;
+    --border:#2a374b;
+    --accent:#7fa2f0;
+    --accent-ink:#0e141f;
+    --accent-soft:#233254;
+    --good:#4fbf8f;
+    --good-soft:#173327;
+    --learn:#b498eb;
+    --learn-soft:#2b2144;
+    --warn:#e0ab5c;
+    --warn-soft:#3a2c12;
+    --muted:#71809a;
+    --muted-soft:#1d2738;
+    --code-bg:#0a1018;
+    --code-ink:#cfdcf2;
+    --code-accent:#9fc0ff;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px -10px rgba(0,0,0,.5);
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:var(--font-body);line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,h4{text-wrap:balance;margin:0;font-weight:600;}
+  code,.mono{font-family:var(--font-mono);}
+  a{color:var(--accent);}
+  ::selection{background:var(--accent-soft);}
+  button{font-family:inherit;cursor:pointer;}
+  input,textarea{font-family:inherit;}
+
+  /* ---------- shell ---------- */
+  .shell{max-width:1280px;margin:0 auto;padding:20px 24px 80px;}
+  header.top{
+    display:flex;align-items:center;gap:20px;justify-content:space-between;
+    padding:18px 4px 22px;flex-wrap:wrap;
+  }
+  .brand{display:flex;align-items:center;gap:14px;}
+  .brand .mark{
+    width:42px;height:42px;border-radius:9px;background:var(--ink);
+    color:var(--bg);display:flex;align-items:center;justify-content:center;
+    font-family:var(--font-mono);font-weight:600;font-size:13px;letter-spacing:.02em;
+    flex:none;
+  }
+  .brand h1{font-size:19px;letter-spacing:-.01em;}
+  .brand .sub{font-size:12.5px;color:var(--ink-dim);margin-top:2px;font-family:var(--font-mono);}
+  .overall{display:flex;align-items:center;gap:12px;}
+  .overall .num{font-family:var(--font-mono);font-size:22px;font-weight:600;}
+  .overall .lbl{font-size:11.5px;color:var(--ink-dim);text-transform:uppercase;letter-spacing:.06em;}
+
+  .layout{display:grid;grid-template-columns:264px 1fr;gap:22px;align-items:start;}
+  @media (max-width:880px){.layout{grid-template-columns:1fr;}}
+
+  /* ---------- nav ---------- */
+  nav.rail{
+    background:var(--surface);border:1px solid var(--border);border-radius:12px;
+    padding:8px;box-shadow:var(--shadow);position:sticky;top:16px;
+    max-height:calc(100vh - 32px);overflow-y:auto;
+  }
+  @media (max-width:880px){nav.rail{position:static;max-height:none;}}
+  .rail-group-label{
+    font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);
+    padding:12px 12px 6px;
+  }
+  .rail-item{
+    display:flex;align-items:center;gap:10px;width:100%;text-align:left;
+    background:none;border:none;border-radius:8px;padding:8px 10px;color:var(--ink);
+    font-size:13.5px;
+  }
+  .rail-item:hover{background:var(--surface-2);}
+  .rail-item.active{background:var(--accent-soft);color:var(--accent);font-weight:600;}
+  .rail-item .ref{font-family:var(--font-mono);font-size:10.5px;color:var(--muted);width:26px;flex:none;}
+  .rail-item.active .ref{color:var(--accent);}
+  .rail-item .t{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .rail-item .ring{flex:none;}
+  .rail-item.nea{margin-top:4px;border-top:1px solid var(--border);border-radius:0;padding-top:14px;}
+
+  /* progress ring */
+  svg.ring{display:block;}
+  .ring-track{fill:none;stroke:var(--muted-soft);}
+  .ring-fill{fill:none;stroke:var(--good);stroke-linecap:round;transform:rotate(-90deg);transform-origin:center;}
+
+  /* ---------- main ---------- */
+  main{min-width:0;}
+  .card{
+    background:var(--surface);border:1px solid var(--border);border-radius:12px;
+    padding:22px 24px;box-shadow:var(--shadow);
+  }
+  .card + .card{margin-top:18px;}
+  .stack{display:flex;flex-direction:column;gap:18px;}
+
+  /* overview */
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;}
+  .kpi{
+    background:var(--surface);border:1px solid var(--border);border-radius:12px;
+    padding:16px 18px;box-shadow:var(--shadow);
+  }
+  .kpi .n{font-family:var(--font-mono);font-size:26px;font-weight:600;}
+  .kpi .l{font-size:12px;color:var(--ink-dim);margin-top:2px;}
+  .kpi.accent .n{color:var(--accent);}
+
+  .topic-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;}
+  .topic-tile{
+    display:flex;flex-direction:column;gap:10px;text-align:left;
+    background:var(--surface);border:1px solid var(--border);border-radius:12px;
+    padding:14px 16px;box-shadow:var(--shadow);
+  }
+  .topic-tile:hover{border-color:var(--accent);}
+  .topic-tile .row1{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  .topic-tile .ref{font-family:var(--font-mono);font-size:11px;color:var(--muted);}
+  .topic-tile .title{font-size:13.5px;font-weight:600;line-height:1.3;}
+  .topic-tile .unit{font-size:11px;color:var(--ink-dim);}
+  .bar{height:6px;border-radius:4px;background:var(--muted-soft);overflow:hidden;}
+  .bar > i{display:block;height:100%;background:var(--good);border-radius:4px;}
+  .focus-banner{
+    display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
+    background:var(--accent);color:var(--accent-ink);border-radius:12px;padding:18px 22px;
+  }
+  .focus-banner .eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.08em;opacity:.85;}
+  .focus-banner h2{color:var(--accent-ink);font-size:19px;margin-top:4px;}
+  .focus-banner p{margin:4px 0 0;font-size:13px;opacity:.9;max-width:52ch;}
+  .btn{
+    background:var(--surface);color:var(--accent);border:1px solid transparent;border-radius:8px;
+    padding:9px 16px;font-size:13px;font-weight:600;white-space:nowrap;
+  }
+  .btn.ghost{background:transparent;color:var(--accent-ink);border-color:rgba(255,255,255,.5);}
+
+  /* topic detail */
+  .topic-head{display:flex;justify-content:space-between;gap:18px;flex-wrap:wrap;align-items:flex-start;}
+  .topic-head .ref{font-family:var(--font-mono);color:var(--accent);font-size:12.5px;font-weight:600;letter-spacing:.02em;}
+  .topic-head h2{font-size:22px;margin-top:4px;}
+  .topic-head .unit-badge{
+    display:inline-block;margin-top:8px;font-size:11.5px;background:var(--surface-2);color:var(--ink-dim);
+    padding:4px 10px;border-radius:999px;
+  }
+  .blurb{color:var(--ink-dim);font-size:14px;max-width:66ch;margin-top:10px;}
+
+  .checklist{display:flex;flex-direction:column;border-top:1px solid var(--border);margin-top:14px;}
+  .check-row{
+    display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid var(--border);
+  }
+  .check-row .label{flex:1;font-size:13.5px;}
+  .seg{display:inline-flex;background:var(--surface-2);border-radius:8px;padding:3px;gap:2px;flex:none;}
+  .seg button{
+    border:none;background:none;font-size:11px;padding:6px 9px;border-radius:6px;color:var(--ink-dim);
+    font-weight:500;white-space:nowrap;
+  }
+  .seg button.on[data-s="learning"]{background:var(--learn-soft);color:var(--learn);}
+  .seg button.on[data-s="practising"]{background:var(--warn-soft);color:var(--warn);}
+  .seg button.on[data-s="confident"]{background:var(--good-soft);color:var(--good);}
+  .seg button.on[data-s="not-started"]{background:var(--muted-soft);color:var(--ink-dim);}
+
+  .resources{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;}
+  .res-link{
+    display:inline-flex;align-items:center;gap:6px;font-size:12.5px;text-decoration:none;
+    background:var(--surface-2);color:var(--ink);padding:7px 12px;border-radius:8px;
+  }
+  .res-link:hover{background:var(--accent-soft);color:var(--accent);}
+  .res-link .dot{width:5px;height:5px;border-radius:50%;background:var(--accent);flex:none;}
+
+  h3.section-title{
+    font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);
+    margin-bottom:10px;
+  }
+
+  /* exercises */
+  .ex{border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin-top:12px;}
+  .ex h4{font-size:14.5px;}
+  .ex .prompt{font-size:13px;color:var(--ink-dim);margin-top:4px;}
+  pre.code{
+    background:var(--code-bg);color:var(--code-ink);border-radius:8px;padding:14px 16px;
+    font-family:var(--font-mono);font-size:12.5px;overflow-x:auto;margin:12px 0;line-height:1.6;
+  }
+  pre.code .kw{color:var(--code-accent);}
+  table.trace{border-collapse:collapse;width:100%;margin:12px 0;font-family:var(--font-mono);font-size:12.5px;}
+  table.trace th,table.trace td{border:1px solid var(--border);padding:7px 9px;text-align:center;}
+  table.trace th{background:var(--surface-2);font-weight:600;color:var(--ink-dim);font-size:11px;}
+  table.trace input{
+    width:100%;border:none;background:transparent;text-align:center;font-family:var(--font-mono);
+    font-size:12.5px;color:var(--ink);padding:2px;border-radius:4px;
+  }
+  table.trace input.correct{background:var(--good-soft);color:var(--good);}
+  table.trace input.wrong{background:var(--warn-soft);color:var(--warn);}
+  table.trace td.given{color:var(--muted);}
+  .ex-actions{display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap;}
+  .btn2{
+    background:var(--accent);color:var(--accent-ink);border:none;border-radius:8px;
+    padding:8px 14px;font-size:12.5px;font-weight:600;
+  }
+  .btn2.alt{background:var(--surface-2);color:var(--ink);}
+  .ex-feedback{font-size:12.5px;font-weight:600;}
+  .ex-feedback.ok{color:var(--good);}
+  .ex-feedback.no{color:var(--warn);}
+  .answer{
+    margin-top:12px;padding-top:12px;border-top:1px dashed var(--border);font-size:13px;
+    color:var(--ink-dim);display:none;
+  }
+  .answer.show{display:block;}
+
+  svg.fsm{width:100%;max-width:420px;height:auto;display:block;margin:14px auto;}
+  svg.fsm text{font-family:var(--font-mono);font-size:11px;fill:var(--ink);}
+  svg.fsm circle.state{fill:var(--surface);stroke:var(--ink-dim);stroke-width:1.6;}
+  svg.fsm circle.accept{stroke:var(--good);stroke-width:2.4;}
+  svg.fsm circle.start-marker{fill:var(--ink-dim);}
+  svg.fsm path.edge{fill:none;stroke:var(--ink-dim);stroke-width:1.3;marker-end:url(#arrow);}
+  svg.fsm path.edge.self{stroke:var(--accent);}
+  svg.fsm text.edge-label{fill:var(--accent);font-size:10.5px;}
+
+  .flash{
+    display:flex;flex-direction:column;align-items:center;gap:14px;padding:20px;
+  }
+  .flash-card{
+    width:100%;max-width:480px;min-height:130px;border:1px solid var(--border);border-radius:12px;
+    background:var(--surface-2);display:flex;align-items:center;justify-content:center;text-align:center;
+    padding:20px;font-size:15px;cursor:pointer;position:relative;
+  }
+  .flash-card .tag{position:absolute;top:10px;left:14px;font-size:10px;text-transform:uppercase;
+    letter-spacing:.08em;color:var(--muted);}
+  .flash-progress{font-size:12px;color:var(--ink-dim);font-family:var(--font-mono);}
+  .flash-actions{display:flex;gap:10px;}
+
+  /* NEA */
+  .nea-total{
+    display:flex;align-items:baseline;gap:8px;font-family:var(--font-mono);
+  }
+  .nea-total .big{font-size:30px;font-weight:600;color:var(--accent);}
+  .nea-sections{display:flex;flex-direction:column;gap:12px;margin-top:16px;}
+  .nea-row{
+    border:1px solid var(--border);border-radius:10px;padding:14px 16px;
+    display:grid;grid-template-columns:1fr auto;gap:10px 16px;align-items:start;
+  }
+  .nea-row .name{font-size:14px;font-weight:600;}
+  .nea-row .marks{font-family:var(--font-mono);font-size:11.5px;color:var(--muted);}
+  .nea-row .desc{font-size:12.5px;color:var(--ink-dim);margin-top:3px;max-width:60ch;}
+  .nea-row .ctrl{display:flex;gap:10px;align-items:center;flex-wrap:wrap;grid-column:1 / -1;margin-top:8px;}
+  .nea-row select, .nea-row input[type=date], .nea-row input[type=text]{
+    border:1px solid var(--border);background:var(--surface);color:var(--ink);border-radius:7px;
+    padding:6px 9px;font-size:12.5px;
+  }
+  .nea-row input[type=text]{flex:1;min-width:160px;}
+  .field-label{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-right:2px;}
+
+  .empty-note{font-size:12px;color:var(--muted);font-style:italic;margin-top:14px;}
+  .sync-note{
+    display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--muted);
+    position:fixed;bottom:16px;right:18px;background:var(--surface);border:1px solid var(--border);
+    padding:7px 12px;border-radius:999px;box-shadow:var(--shadow);
+  }
+  .sync-dot{width:7px;height:7px;border-radius:50%;background:var(--good);}
+  @media (prefers-reduced-motion:no-preference){
+    .card, .kpi, .topic-tile{transition:border-color .15s ease;}
+  }
+</style>
+
+<div class="shell">
+  <header class="top">
+    <div class="brand">
+      <div class="mark">4.x</div>
+      <div>
+        <h1>Spec Tracker</h1>
+        <div class="sub">AQA A-Level Computer Science &middot; 7517</div>
+      </div>
+    </div>
+    <div class="overall" id="overallWrap"></div>
+  </header>
+
+  <div class="layout">
+    <nav class="rail" id="rail"></nav>
+    <main id="main"></main>
+  </div>
+</div>
+
+<div class="sync-note" id="syncNote"><span class="sync-dot"></span><span id="syncText">Not connected</span></div>
+
+<script>
+/* =========================================================================
+   DATA
+   ========================================================================= */
+const STATUS = [
+  {k:'not-started', label:'—'},
+  {k:'learning',    label:'Learning'},
+  {k:'practising',  label:'Practising'},
+  {k:'confident',   label:'Confident'},
+];
+
+const RES = {
+  isaac:  {name:'Isaac Computer Science', url:'https://isaaccomputerscience.org/'},
+  craig:  {name:"Craig 'n' Dave",         url:'https://www.craigndave.org/'},
+  pmt:    {name:'Physics & Maths Tutor',  url:'https://pmt.physicsandmathstutor.com/subject/computer-science'},
+  sme:    {name:'Save My Exams',          url:'https://www.savemyexams.com/learning-hub/exam-specifications/a-level/computer-science/aqa/'},
+  seneca: {name:'Seneca Learning',        url:'https://senecalearning.com/'},
+  codewars:{name:'Codewars practice',     url:'https://www.codewars.com/'},
+  pmtFsm: {name:'PMT: FSM notes (PDF)',   url:'https://pmt.physicsandmathstutor.com/download/Computer-Science/A-level/Notes/AQA/04-Theory-of-Computation-AS/Advanced/4.2.%20Finite%20State%20Machines%20(FSMs)%20-%20Advanced.pdf'},
+  pmtProg:{name:'PMT: Programming notes (PDF)', url:'https://pmt.physicsandmathstutor.com/download/Computer-Science/A-level/Notes/AQA/01-Fundamentals-of-Programming/Advanced/1.1.%20Programming%20-%20Advanced.pdf'},
+  neaGuide:{name:'AQA NEA guidance (PDF)', url:'https://filestore.aqa.org.uk/resources/computing/AQA-7517-NEA-GUIDE.PDF'},
+};
+function aqa(slug){ return {name:'AQA official spec', url:'https://www.aqa.org.uk/subjects/computer-science/a-level/computer-science-7517/specification/subject-content/'+slug}; }
+
+const TOPICS = [
+  { id:'programming', ref:'4.1', title:'Fundamentals of Programming', unit:'Units 1 & 5',
+    blurb:'The core language toolkit: data types, control structures, subroutines and the two big paradigms (procedural and object-oriented).',
+    items:[
+      'Data types & user-defined types (records, arrays)',
+      'Sequence, selection & iteration (definite and indefinite)',
+      'Arithmetic, relational & Boolean operators',
+      'String-handling operations',
+      'Exception handling',
+      'Subroutines: parameters, return values, local vs global scope',
+      'Stack frames & recursive techniques',
+      'Procedural design & hierarchy charts',
+      'OOP: class, object, inheritance, encapsulation, polymorphism',
+      'Drawing & interpreting class diagrams',
+    ],
+    resources:[aqa('fundamentals-of-programming'), RES.isaac, RES.pmtProg] },
+
+  { id:'data-structures', ref:'4.2', title:'Fundamentals of Data Structures', unit:'Units 1 & 5',
+    blurb:'How data is organised in memory: arrays and files, then the abstract data types built from them.',
+    items:[
+      '1D, 2D and n-dimensional arrays',
+      'Records, and text/binary file I/O',
+      'Stacks — push, pop, peek',
+      'Queues — linear, circular, priority',
+      'Graphs — adjacency matrix & adjacency list',
+      'Trees — binary trees & binary search trees',
+      'Hash tables & collision handling',
+      'Dictionaries & vectors',
+    ],
+    resources:[aqa('fundamentals-of-data-structures'), RES.isaac, RES.craig] },
+
+  { id:'algorithms', ref:'4.3', title:'Fundamentals of Algorithms', unit:'Units 1 & 5',
+    blurb:'Standard algorithms for traversing, searching, sorting and pathfinding — and being able to trace and compare them.',
+    items:[
+      'Breadth-first & depth-first graph traversal',
+      'Pre-, in- and post-order tree traversal',
+      'Infix ↔ Reverse Polish Notation conversion',
+      'Linear search & binary search',
+      'Bubble sort & merge sort',
+      "Dijkstra's shortest path algorithm",
+      'Comparing algorithms by time complexity',
+    ],
+    resources:[aqa('fundamentals-of-algorithms'), RES.isaac, RES.codewars] },
+
+  { id:'computation', ref:'4.4', title:'Theory of Computation', unit:'Unit 2 — current focus',
+    blurb:'Computational thinking, pseudocode fluency, abstraction, and finite state machines — plus regular languages, BNF and Turing machines later in the course.',
+    items:[
+      'Computational thinking: decomposition & abstraction',
+      'Reading & writing AQA-style pseudocode',
+      'Hand-tracing algorithms (trace tables)',
+      'Types of abstraction: representational, procedural, functional, data, information hiding',
+      'Finite state machines — state transition diagrams & tables',
+      'Mealy machines (FSMs with output)',
+      'Regular expressions & set notation',
+      'BNF & context-free languages',
+      'Big-O notation & tractable/intractable problems',
+      'Turing machines',
+    ],
+    resources:[aqa('theory-of-computation'), RES.pmtFsm, RES.craig],
+    hasExercises:true },
+
+  { id:'data-representation', ref:'4.5', title:'Fundamentals of Data Representation', unit:'Unit 3',
+    blurb:'How numbers, text, images, sound and errors are represented and manipulated in binary.',
+    items:[
+      'Number bases: decimal, binary, hexadecimal conversions',
+      'Units of information & binary/decimal prefixes',
+      "Unsigned binary & two's complement",
+      'Fixed-point & floating-point representation',
+      'Rounding, absolute & relative error',
+      'ASCII, Unicode & error detection (parity, checksums)',
+      'Bitmap & vector graphics',
+      'Digital sound: sampling rate, resolution, Nyquist theorem, MIDI',
+      'Compression: run-length & dictionary-based',
+      'Caesar & Vernam ciphers',
+    ],
+    resources:[aqa('fundamentals-of-data-representation'), RES.sme, RES.seneca] },
+
+  { id:'computer-systems', ref:'4.6', title:'Fundamentals of Computer Systems', unit:'Unit 4',
+    blurb:'Software classification, translators, and the digital logic that underpins every circuit.',
+    items:[
+      'Hardware vs software, system vs application software',
+      'Operating system roles',
+      'Compilers, interpreters & assemblers',
+      'Logic gates & truth tables',
+      'Half-adders & full-adders',
+      'D-type flip-flops',
+      "Boolean algebra & De Morgan's laws",
+    ],
+    resources:[aqa('fundamentals-of-computer-systems'), RES.craig, RES.pmt] },
+
+  { id:'architecture', ref:'4.7', title:'Computer Organisation & Architecture', unit:'Units 1 & 5',
+    blurb:'What happens inside the processor: registers, the fetch-execute cycle, and the hardware around it.',
+    items:[
+      'Von Neumann vs Harvard architecture',
+      'The stored program concept',
+      'CPU registers (PC, CIR, MAR, MBR, status)',
+      'The fetch-execute cycle',
+      'Instruction sets & addressing modes',
+      'Machine code & assembly-language operations',
+      'Interrupts & the interrupt service routine',
+      'Performance factors: cores, cache, clock speed, bus width',
+      'Input/output devices & secondary storage',
+    ],
+    resources:[aqa('fundamentals-of-computer-organisation-and-architecture'), RES.craig, RES.isaac] },
+
+  { id:'consequences', ref:'4.8', title:'Consequences of Uses of Computing', unit:'',
+    blurb:'The moral, social, legal and cultural dimension of computer science — argued from case studies, not just definitions.',
+    items:[
+      'Moral, social, legal & cultural issues in computing',
+      'Privacy, surveillance & data aggregation',
+      'Responsibility of computer scientists & software engineers',
+      'Case studies: algorithmic bias, scale, regulation',
+    ],
+    resources:[aqa('consequences-of-uses-of-computing'), RES.sme, RES.seneca] },
+
+  { id:'networking', ref:'4.9', title:'Communication & Networking', unit:'Unit 6',
+    blurb:'How data physically moves between machines — from a single cable to the whole internet.',
+    items:[
+      'Serial vs parallel, synchronous vs asynchronous transmission',
+      'Baud rate, bit rate, bandwidth, latency',
+      'Network topologies (star, bus)',
+      'Peer-to-peer vs client-server networking',
+      'Wireless networking, CSMA/CA, WPA',
+      'Packet switching, routers & DNS',
+      'Firewalls, encryption & digital certificates',
+      'The TCP/IP four-layer stack',
+      'Application protocols: HTTP, FTP, SMTP, SSH',
+      'IP addressing, subnetting, DHCP & NAT',
+    ],
+    resources:[aqa('fundamentals-of-communication-and-networking'), RES.craig, RES.pmt] },
+
+  { id:'databases', ref:'4.10', title:'Fundamentals of Databases', unit:'Databases module',
+    blurb:'Modelling data as entities and relationships, then querying and protecting it with SQL.',
+    items:[
+      'Entity relationship modelling',
+      'Relational database concepts (primary & foreign keys)',
+      'Normalisation to third normal form (3NF)',
+      'SQL: SELECT, INSERT, UPDATE, DELETE, table definitions',
+      'Client-server databases & concurrent access control',
+    ],
+    resources:[aqa('fundamentals-of-databases'), RES.isaac, RES.sme] },
+
+  { id:'big-data', ref:'4.11', title:'Big Data', unit:'Databases module',
+    blurb:'Why the relational model breaks down at scale, and what replaces it.',
+    items:[
+      'Volume, velocity & variety',
+      'Why relational databases struggle with Big Data',
+      'Distributed processing & the link to functional programming',
+      'Fact-based & graph schema data models',
+    ],
+    resources:[aqa('big-data'), RES.sme, RES.seneca] },
+
+  { id:'functional', ref:'4.12', title:'Fundamentals of Functional Programming', unit:'',
+    blurb:'A different paradigm entirely: functions as data, and programs built from composing them.',
+    items:[
+      'Function notation & first-class functions',
+      'Function application & partial application',
+      'Composition of functions',
+      'Higher-order functions: map, filter, reduce',
+      'Writing simple functional programs',
+      'Lists as head : tail structures',
+    ],
+    resources:[aqa('fundamentals-of-functional-programming'), RES.isaac, RES.pmt] },
+
+  { id:'software-dev', ref:'4.13', title:'Systematic Approach to Problem Solving', unit:'Software development module',
+    blurb:'The analysis → design → implementation → testing → evaluation cycle — the same methodology the NEA is marked against.',
+    items:[
+      'Analysis: defining requirements through user interaction',
+      'Design: data structures, algorithms, modular structure, UI',
+      'Implementation: turning designs into working code',
+      'Testing: normal, boundary & erroneous data',
+      'Evaluation criteria for a computer system',
+    ],
+    resources:[aqa('systematic-approach-to-problem-solving'), RES.neaGuide, RES.sme] },
+];
+
+const NEA_SECTIONS = [
+  {id:'analysis', name:'Analysis', marks:9, desc:'Problem statement, stakeholders, measurable objectives, problem modelling.'},
+  {id:'design', name:'Documented Design', marks:12, desc:'Diagrams, pseudocode or prose that communicate the design before building it.'},
+  {id:'tech-complete', name:'Technical Solution — Completeness', marks:15, desc:'Does the finished system meet the stated requirements.'},
+  {id:'tech-technique', name:'Technical Solution — Techniques Used', marks:27, desc:'Coding skill: data structures, modularity, exception handling, annotation.'},
+  {id:'testing', name:'Testing', marks:8, desc:'Representative test plan — normal, boundary and erroneous data, with evidence.'},
+  {id:'evaluation', name:'Evaluation', marks:4, desc:'Meeting requirements, independent user feedback, and real improvements.'},
+];
+const NEA_TOTAL = NEA_SECTIONS.reduce((s,x)=>s+x.marks,0);
+const NEA_STATUS = ['not-started','in-progress','drafted','complete'];
+
+/* ---- Unit 2 exercises ---- */
+const TRACE_EXAMPLES = [
+  { id:'trace1', title:'Summing with a WHILE loop',
+    code:[
+      ['total ',' ← 0'], ['count ',' ← 1'],
+      ['WHILE count <= 5',''],
+      ['    total ',' ← total + count'],
+      ['    count ',' ← count + 1'],
+      ['ENDWHILE',''], ['OUTPUT total',''],
+    ],
+    cols:['Iteration','count (start)','total (after +)','count (after ++)'],
+    rows:[
+      {given:[1,1], answer:[1,2]},
+      {given:[2,2], answer:[3,3]},
+      {given:[3,3], answer:[6,4]},
+      {given:[4,4], answer:[10,5]},
+      {given:[5,5], answer:[15,6]},
+    ],
+    output:'OUTPUT total → 15' },
+
+  { id:'trace2', title:'Swapping two values',
+    code:[['a ',' ← 8'], ['b ',' ← 3'], ['IF a > b THEN',''], ['    temp ',' ← a'],
+          ['    a ',' ← b'], ['    b ',' ← temp'], ['ENDIF',''], ['OUTPUT a, b','']],
+    cols:['','a','b','temp'],
+    rows:[
+      {given:['start',8,3], answer:['—'], skipAnswerAt:0},
+    ],
+    customCols:['a','b','temp'],
+    customAnswer:[3,8,8],
+    output:'OUTPUT a, b → 3, 8' },
+
+  { id:'trace3', title:'Nested FOR loops',
+    code:[['FOR i ',' ← 1 TO 3'], ['    FOR j ',' ← 1 TO 2'], ['        OUTPUT i * j',''],
+          ['    NEXT j',''], ['NEXT i','']],
+    cols:['i','j','output (i × j)'],
+    rows:[
+      {given:[1,1], answer:[1]},
+      {given:[1,2], answer:[2]},
+      {given:[2,1], answer:[2]},
+      {given:[2,2], answer:[4]},
+      {given:[3,1], answer:[3]},
+      {given:[3,2], answer:[6]},
+    ],
+    output:'Six OUTPUT statements run in total.' },
+];
+
+const FSM_EXAMPLES = [
+  { id:'fsm1', title:"FSM without output — detects a string ending in '01'",
+    desc:'States A (start), B, C (accepting). A doesn’t end in 0 or 01; B means the last symbol seen was 0; C (accepting) means the last two symbols were 01.',
+    question:"Trace the input 1011 through this machine. Which state does it end in — is 1011 accepted?",
+    answer:"1 → A, 0 → B, 1 → C, 1 → A. It ends in state A, which is not accepting — correct, since “1011” ends in “11”, not “01”.",
+    states:[{id:'A',x:70,y:90,accept:false,start:true},{id:'B',x:210,y:90,accept:false},{id:'C',x:350,y:90,accept:true}],
+    edges:[
+      {from:'A',to:'A',label:'1',self:true},
+      {from:'A',to:'B',label:'0'},
+      {from:'B',to:'B',label:'0',self:true},
+      {from:'B',to:'C',label:'1'},
+      {from:'C',to:'A',label:'1',curveUp:true},
+      {from:'C',to:'B',label:'0',below:true},
+    ] },
+  { id:'fsm2', title:'Mealy machine (with output) — a turnstile',
+    desc:'States Locked (start) and Unlocked. Each transition is labelled input / output.',
+    question:'For the input sequence coin, push, push, coin, push — list the output sequence and the final state.',
+    answer:'unlock, lock, –, unlock, lock. Final state: Locked.',
+    states:[{id:'Locked',x:110,y:90,accept:false,start:true},{id:'Unlocked',x:320,y:90,accept:false}],
+    edges:[
+      {from:'Locked',to:'Unlocked',label:'coin / unlock'},
+      {from:'Unlocked',to:'Locked',label:'push / lock',below:true},
+      {from:'Locked',to:'Locked',label:'push / –',self:true},
+      {from:'Unlocked',to:'Unlocked',label:'coin / –',self:true},
+    ] },
+];
+
+const GLOSSARY = [
+  ['Abstraction','Removing unnecessary detail so you can focus on what’s relevant to the problem.'],
+  ['Decomposition','Breaking a complex problem down into smaller, more manageable sub-problems.'],
+  ['Representational abstraction','Choosing a simplified representation for data that hides its physical implementation, e.g. thinking of a queue conceptually rather than by its memory layout.'],
+  ['Abstraction by generalisation','Spotting features shared by several objects or procedures and grouping them — e.g. several classes sharing a superclass.'],
+  ['Information hiding','Hiding the internal details of how a procedure or object works from the code that uses it.'],
+  ['Procedural abstraction','Treating a sequence of instructions as one named subroutine, so the caller doesn’t need to know how it works inside.'],
+  ['Functional abstraction','Using a function by its inputs and outputs alone, without needing to know its internal logic.'],
+  ['Data abstraction','Separating how data is logically used from how it is physically stored — e.g. an abstract data type like a stack.'],
+  ['Problem abstraction / reduction','Simplifying a problem by removing or ignoring detail that isn’t relevant to a solution.'],
+  ['Finite state machine (FSM)','A model with a finite number of states and labelled transitions between them, triggered by input, with one start state.'],
+  ['State transition diagram','A diagram showing an FSM’s states as circles and its transitions as labelled arrows.'],
+  ['State transition table','A table listing, for each state and input, the resulting next state (and output, for a Mealy machine).'],
+  ['Mealy machine','A finite state machine that produces an output on each transition, not just in each state.'],
+  ['Accepting state','A state that, if the machine ends there after reading the whole input, means that input is accepted.'],
+];
+
+/* =========================================================================
+   STATE + DB SYNC
+   ========================================================================= */
+let state = { subtopics:{}, nea:{ problem:'', sections:{} }, glossary:{ mastered:[] } };
+let db = null;
+let currentView = 'overview';
+let flashIndex = 0, flashFlipped = false;
+let unsavedTimer = null;
+
+function subId(topicId, idx){ return topicId+'__'+idx; }
+function getStatus(id){ return state.subtopics[id] || 'not-started'; }
+function escapeHtml(s){
+  return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function scheduleSave(){
+  clearTimeout(unsavedTimer);
+  setSync('saving');
+  unsavedTimer = setTimeout(saveState, 450);
+}
+async function saveState(){
+  if(!db){ setSync('local'); return; }
+  try{
+    await db.doc('progress/state').set(state);
+    setSync('synced');
+  }catch(e){ setSync('error'); }
+}
+function setSync(mode){
+  const dot = document.querySelector('.sync-dot');
+  const txt = document.getElementById('syncText');
+  if(mode==='synced'){ dot.style.background='var(--good)'; txt.textContent='Synced'; }
+  else if(mode==='saving'){ dot.style.background='var(--warn)'; txt.textContent='Saving…'; }
+  else if(mode==='local'){ dot.style.background='var(--muted)'; txt.textContent='Local only — open as a shared page to sync'; }
+  else { dot.style.background='var(--warn)'; txt.textContent='Could not sync'; }
+}
+
+async function initDb(){
+  try{
+    db = await window.claude?.use?.('db');
+  }catch(e){ db = null; }
+  if(!db){ setSync('local'); return; }
+  db.doc('progress/state').onSnapshot(snap=>{
+    if(snap.exists){
+      const d = snap.data();
+      state = {
+        subtopics: d.subtopics || {},
+        nea: { problem: d.nea?.problem || '', sections: d.nea?.sections || {} },
+        glossary: { mastered: d.glossary?.mastered || [] },
+      };
+    }
+    setSync('synced');
+    render();
+  }, ()=> setSync('error'));
+}
+
+/* =========================================================================
+   PROGRESS CALC
+   ========================================================================= */
+function topicProgress(topic){
+  const n = topic.items.length;
+  let confident=0, started=0;
+  topic.items.forEach((_,i)=>{
+    const s = getStatus(subId(topic.id,i));
+    if(s==='confident') confident++;
+    if(s!=='not-started') started++;
+  });
+  return { pct: n? Math.round(confident/n*100):0, started, confident, total:n };
+}
+function overallProgress(){
+  let total=0, confident=0;
+  TOPICS.forEach(t=>{ total+=t.items.length; confident+=topicProgress(t).confident; });
+  return { pct: total? Math.round(confident/total*100):0, total, confident };
+}
+function neaProgress(){
+  let done=0;
+  NEA_SECTIONS.forEach(s=>{ if((state.nea.sections[s.id]?.status)==='complete') done++; });
+  return Math.round(done/NEA_SECTIONS.length*100);
+}
+
+function ring(pct, size, stroke, colorVar){
+  const r = (size-stroke)/2, c = 2*Math.PI*r, off = c*(1-pct/100);
+  return `<svg class="ring" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+    <circle class="ring-track" cx="${size/2}" cy="${size/2}" r="${r}" stroke-width="${stroke}"></circle>
+    <circle class="ring-fill" cx="${size/2}" cy="${size/2}" r="${r}" stroke-width="${stroke}"
+      style="stroke-dasharray:${c};stroke-dashoffset:${off};${colorVar?`stroke:${colorVar};`:''}"></circle>
+  </svg>`;
+}
+
+/* =========================================================================
+   RENDER: shell
+   ========================================================================= */
+function render(){
+  renderOverallHeader();
+  renderRail();
+  renderMain();
+}
+
+function renderOverallHeader(){
+  const o = overallProgress();
+  document.getElementById('overallWrap').innerHTML = `
+    ${ring(o.pct,44,5)}
+    <div>
+      <div class="num">${o.pct}%</div>
+      <div class="lbl">${o.confident}/${o.total} confident</div>
+    </div>`;
+}
+
+function renderRail(){
+  const rail = document.getElementById('rail');
+  let html = `<div class="rail-group-label">Overview</div>
+    <button class="rail-item ${currentView==='overview'?'active':''}" onclick="goto('overview')">
+      <span class="ref">—</span><span class="t">Dashboard</span>
+    </button>
+    <div class="rail-group-label">Specification 4.1–4.13</div>`;
+  TOPICS.forEach(t=>{
+    const p = topicProgress(t);
+    html += `<button class="rail-item ${currentView===t.id?'active':''}" onclick="goto('${t.id}')">
+      <span class="ref">${t.ref}</span><span class="t">${escapeHtml(t.title)}</span>
+      <span class="ring">${ring(p.pct,20,3)}</span>
+    </button>`;
+  });
+  const np = neaProgress();
+  html += `<button class="rail-item nea ${currentView==='nea'?'active':''}" onclick="goto('nea')">
+    <span class="ref">4.14</span><span class="t">Non-Exam Assessment</span>
+    <span class="ring">${ring(np,20,3)}</span>
+  </button>`;
+  rail.innerHTML = html;
+}
+
+function goto(id){ currentView=id; render(); window.scrollTo({top:0,behavior:'smooth'}); }
+
+function renderMain(){
+  const main = document.getElementById('main');
+  if(currentView==='overview') main.innerHTML = overviewHtml();
+  else if(currentView==='nea') main.innerHTML = neaHtml();
+  else main.innerHTML = topicHtml(TOPICS.find(t=>t.id===currentView));
+  wireInteractions();
+}
+
+/* =========================================================================
+   RENDER: overview
+   ========================================================================= */
+function overviewHtml(){
+  const o = overallProgress();
+  const focus = TOPICS.find(t=>t.id==='computation');
+  const fp = topicProgress(focus);
+  let tiles = TOPICS.map(t=>{
+    const p = topicProgress(t);
+    return `<button class="topic-tile" onclick="goto('${t.id}')">
+      <div class="row1"><span class="ref">${t.ref}</span>${ring(p.pct,26,4)}</div>
+      <div class="title">${escapeHtml(t.title)}</div>
+      ${t.unit?`<div class="unit">${escapeHtml(t.unit)}</div>`:''}
+      <div class="bar"><i style="width:${p.pct}%"></i></div>
+    </button>`;
+  }).join('');
+
+  return `
+  <div class="stack">
+    <div class="focus-banner">
+      <div>
+        <div class="eyebrow">Currently studying &middot; Unit 2</div>
+        <h2>${escapeHtml(focus.title)}</h2>
+        <p>${fp.confident}/${fp.total} sub-topics confident. Trace tables, FSM questions and a glossary drill are ready to practise.</p>
+      </div>
+      <button class="btn" onclick="goto('computation')">Open Unit 2 →</button>
+    </div>
+
+    <div class="kpis">
+      <div class="kpi accent"><div class="n">${o.pct}%</div><div class="l">Overall syllabus confidence</div></div>
+      <div class="kpi"><div class="n">${o.confident}/${o.total}</div><div class="l">Sub-topics marked confident</div></div>
+      <div class="kpi"><div class="n">${neaProgress()}%</div><div class="l">NEA sections complete</div></div>
+      <div class="kpi"><div class="n">${TOPICS.length}</div><div class="l">Specification areas (4.1–4.13)</div></div>
+    </div>
+
+    <div class="card">
+      <h3 class="section-title">Specification map</h3>
+      <div class="topic-grid">${tiles}</div>
+    </div>
+  </div>`;
+}
+
+/* =========================================================================
+   RENDER: topic
+   ========================================================================= */
+function topicHtml(t){
+  const p = topicProgress(t);
+  let rows = t.items.map((label,i)=>{
+    const id = subId(t.id,i);
+    const s = getStatus(id);
+    return `<div class="check-row">
+      <div class="label">${escapeHtml(label)}</div>
+      <div class="seg">
+        ${STATUS.map(st=>`<button data-id="${id}" data-s="${st.k}" class="${s===st.k?'on':''}">${st.label}</button>`).join('')}
+      </div>
+    </div>`;
+  }).join('');
+
+  const resources = t.resources.map(r=>`<a class="res-link" href="${r.url}" target="_blank" rel="noopener"><span class="dot"></span>${escapeHtml(r.name)}</a>`).join('');
+
+  return `
+  <div class="card">
+    <div class="topic-head">
+      <div>
+        <div class="ref">§ ${t.ref}</div>
+        <h2>${escapeHtml(t.title)}</h2>
+        ${t.unit?`<span class="unit-badge">${escapeHtml(t.unit)}</span>`:''}
+        <p class="blurb">${escapeHtml(t.blurb)}</p>
+      </div>
+      <div>${ring(p.pct,64,6)}</div>
+    </div>
+
+    <h3 class="section-title" style="margin-top:22px;">Checklist — ${p.confident}/${p.total} confident</h3>
+    <div class="checklist">${rows}</div>
+
+    <h3 class="section-title" style="margin-top:20px;">Resources</h3>
+    <div class="resources">${resources}</div>
+  </div>
+  ${t.hasExercises ? exercisesHtml() : ''}
+  `;
+}
+
+/* =========================================================================
+   RENDER: exercises (Unit 2)
+   ========================================================================= */
+function exercisesHtml(){
+  return `
+  <div class="card">
+    <h3 class="section-title">Practice — trace tables</h3>
+    ${TRACE_EXAMPLES.map(traceExHtml).join('')}
+  </div>
+  <div class="card">
+    <h3 class="section-title">Practice — finite state machines</h3>
+    ${FSM_EXAMPLES.map(fsmExHtml).join('')}
+  </div>
+  <div class="card">
+    <h3 class="section-title">Practice — glossary drill</h3>
+    ${flashHtml()}
+  </div>`;
+}
+
+function codeBlock(lines){
+  return '<pre class="code">'+lines.map(l=>escapeHtml(l[0])+'<span class="kw">'+escapeHtml(l[1])+'</span>').join('\n')+'</pre>';
+}
+
+function traceExHtml(ex){
+  if(ex.customCols){
+    const rowsHtml = `<tr>
+      <td class="given">start</td>
+      ${ex.rows[0].given.slice(1).map(v=>`<td class="given">${v}</td>`).join('')}
+    </tr>
+    <tr>
+      <td class="given">after IF</td>
+      ${ex.customCols.map((c,i)=>`<td><input data-ex="${ex.id}" data-r="0" data-c="${i}" size="3"></td>`).join('')}
+    </tr>`;
+    return `<div class="ex">
+      <h4>${escapeHtml(ex.title)}</h4>
+      ${codeBlock(ex.code)}
+      <table class="trace"><thead><tr><th></th>${ex.customCols.map(c=>`<th>${escapeHtml(c)}</th>`).join('')}</tr></thead>
+      <tbody>${rowsHtml}</tbody></table>
+      <div class="ex-actions">
+        <button class="btn2" onclick="checkTrace('${ex.id}')">Check my trace</button>
+        <button class="btn2 alt" onclick="toggleAnswer('${ex.id}')">Show worked trace</button>
+        <span class="ex-feedback" id="fb-${ex.id}"></span>
+      </div>
+      <div class="answer" id="ans-${ex.id}">Worked trace: temp ← 8, a ← 3, b ← 8. ${escapeHtml(ex.output)}</div>
+    </div>`;
+  }
+
+  const head = ex.cols.map(c=>`<th>${escapeHtml(c)}</th>`).join('');
+  const body = ex.rows.map((row,ri)=>{
+    const givenCells = row.given.map(v=>`<td class="given">${v}</td>`).join('');
+    const answerCells = row.answer.map((v,ci)=>`<td><input data-ex="${ex.id}" data-r="${ri}" data-c="${ci}" size="3"></td>`).join('');
+    return `<tr>${givenCells}${answerCells}</tr>`;
+  }).join('');
+
+  return `<div class="ex">
+    <h4>${escapeHtml(ex.title)}</h4>
+    ${codeBlock(ex.code)}
+    <table class="trace"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>
+    <div class="ex-actions">
+      <button class="btn2" onclick="checkTrace('${ex.id}')">Check my trace</button>
+      <button class="btn2 alt" onclick="toggleAnswer('${ex.id}')">Show worked trace</button>
+      <span class="ex-feedback" id="fb-${ex.id}"></span>
+    </div>
+    <div class="answer" id="ans-${ex.id}">${escapeHtml(ex.output)}</div>
+  </div>`;
+}
+
+function checkTrace(exId){
+  const ex = TRACE_EXAMPLES.find(e=>e.id===exId);
+  const inputs = document.querySelectorAll(`input[data-ex="${exId}"]`);
+  let correct=0, total=0;
+  inputs.forEach(inp=>{
+    const r = +inp.dataset.r, c = +inp.dataset.c;
+    const expected = ex.customCols ? ex.customAnswer[c] : ex.rows[r].answer[c];
+    total++;
+    inp.classList.remove('correct','wrong');
+    if(String(inp.value).trim() === String(expected)){ inp.classList.add('correct'); correct++; }
+    else inp.classList.add('wrong');
+  });
+  const fb = document.getElementById('fb-'+exId);
+  fb.textContent = correct===total ? `All ${total} correct!` : `${correct}/${total} correct — check the highlighted cells.`;
+  fb.className = 'ex-feedback ' + (correct===total ? 'ok':'no');
+}
+function toggleAnswer(exId){
+  document.getElementById('ans-'+exId).classList.toggle('show');
+}
+
+/* ---- FSM diagrams ---- */
+function fsmExHtml(fsm){
+  return `<div class="ex">
+    <h4>${escapeHtml(fsm.title)}</h4>
+    <p class="prompt">${escapeHtml(fsm.desc)}</p>
+    ${fsmSvg(fsm)}
+    <p class="prompt"><strong>Question:</strong> ${escapeHtml(fsm.question)}</p>
+    <div class="ex-actions">
+      <button class="btn2 alt" onclick="toggleAnswer('${fsm.id}')">Show answer</button>
+    </div>
+    <div class="answer" id="ans-${fsm.id}">${escapeHtml(fsm.answer)}</div>
+  </div>`;
+}
+function fsmSvg(fsm){
+  const R = 26;
+  const byId = {}; fsm.states.forEach(s=>byId[s.id]=s);
+  let defs = `<defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+    <path d="M0,0 L0,6 L7,3 z" fill="var(--ink-dim)"></path></marker></defs>`;
+  let edges = fsm.edges.map(e=>{
+    const a = byId[e.from], b = byId[e.to];
+    if(e.self){
+      const path = `M ${a.x-14},${a.y-R+4} C ${a.x-34},${a.y-R-34} ${a.x+34},${a.y-R-34} ${a.x+14},${a.y-R+4}`;
+      return `<path class="edge self" d="${path}"></path><text class="edge-label" x="${a.x}" y="${a.y-R-34}" text-anchor="middle">${escapeHtml(e.label)}</text>`;
+    }
+    const dx=b.x-a.x, dy=b.y-a.y, len=Math.hypot(dx,dy);
+    const ux=dx/len, uy=dy/len;
+    const x1=a.x+ux*R, y1=a.y+uy*R, x2=b.x-ux*R, y2=b.y-uy*R;
+    const midx=(x1+x2)/2, midy=(y1+y2)/2 + (e.curveUp?-30:(e.below?26:-10));
+    const path = `M ${x1},${y1} Q ${midx},${midy} ${x2},${y2}`;
+    return `<path class="edge" d="${path}"></path><text class="edge-label" x="${midx}" y="${midy-4}" text-anchor="middle">${escapeHtml(e.label)}</text>`;
+  }).join('');
+  let states = fsm.states.map(s=>{
+    let extra='';
+    if(s.start) extra += `<line x1="${s.x-R-22}" y1="${s.y}" x2="${s.x-R-2}" y2="${s.y}" stroke="var(--ink-dim)" stroke-width="1.3" marker-end="url(#arrow)"></line>`;
+    if(s.accept) extra += `<circle cx="${s.x}" cy="${s.y}" r="${R-5}" fill="none" stroke="var(--good)" stroke-width="1.6"></circle>`;
+    return `<circle class="state ${s.accept?'accept':''}" cx="${s.x}" cy="${s.y}" r="${R}"></circle>
+      <text x="${s.x}" y="${s.y+4}" text-anchor="middle">${escapeHtml(s.id)}</text>${extra}`;
+  }).join('');
+  const w = Math.max(...fsm.states.map(s=>s.x))+90;
+  return `<svg class="fsm" viewBox="0 0 ${w} 190">${defs}${edges}${states}</svg>`;
+}
+
+/* ---- glossary flashcards ---- */
+function flashHtml(){
+  const term = GLOSSARY[flashIndex];
+  const mastered = state.glossary.mastered.length;
+  return `<div class="flash">
+    <div class="flash-progress">${flashIndex+1} / ${GLOSSARY.length} &middot; ${mastered} mastered</div>
+    <div class="flash-card" onclick="flipCard()">
+      <span class="tag">${flashFlipped?'Definition':'Term'}</span>
+      ${escapeHtml(flashFlipped?term[1]:term[0])}
+    </div>
+    <div class="flash-actions">
+      <button class="btn2 alt" onclick="nextCard(false)">Review again</button>
+      <button class="btn2" onclick="nextCard(true)">Got it</button>
+    </div>
+  </div>`;
+}
+function flipCard(){ flashFlipped=!flashFlipped; renderMain(); }
+function nextCard(gotIt){
+  const term = GLOSSARY[flashIndex][0];
+  if(gotIt && !state.glossary.mastered.includes(term)) state.glossary.mastered.push(term);
+  flashIndex = (flashIndex+1) % GLOSSARY.length;
+  flashFlipped = false;
+  renderMain();
+  scheduleSave();
+}
+
+/* =========================================================================
+   RENDER: NEA
+   ========================================================================= */
+function neaHtml(){
+  const rows = NEA_SECTIONS.map(s=>{
+    const rec = state.nea.sections[s.id] || {status:'not-started',target:'',notes:''};
+    return `<div class="nea-row">
+      <div>
+        <div class="name">${escapeHtml(s.name)}</div>
+        <div class="desc">${escapeHtml(s.desc)}</div>
+      </div>
+      <div class="marks">${s.marks} / ${NEA_TOTAL}</div>
+      <div class="ctrl">
+        <span class="field-label">Status</span>
+        <select data-nea="${s.id}" data-f="status">
+          ${NEA_STATUS.map(v=>`<option value="${v}" ${rec.status===v?'selected':''}>${v.replace('-',' ')}</option>`).join('')}
+        </select>
+        <span class="field-label">Target date</span>
+        <input type="date" data-nea="${s.id}" data-f="target" value="${escapeHtml(rec.target)}">
+        <input type="text" data-nea="${s.id}" data-f="notes" placeholder="Notes…" value="${escapeHtml(rec.notes)}">
+      </div>
+    </div>`;
+  }).join('');
+
+  return `
+  <div class="card">
+    <div class="topic-head">
+      <div>
+        <div class="ref">§ 4.14</div>
+        <h2>Non-Exam Assessment</h2>
+        <span class="unit-badge">20% of the A-level &middot; 75 marks</span>
+        <p class="blurb">Marks are weighted heavily toward the Technical Solution (42/75) — completeness and coding technique matter more than documentation length.</p>
+      </div>
+      <div class="nea-total"><span class="big">${neaProgress()}%</span><span>sections complete</span></div>
+    </div>
+    <h3 class="section-title" style="margin-top:20px;">Project problem</h3>
+    <input type="text" id="neaProblem" placeholder="What is the NEA project actually building?" value="${escapeHtml(state.nea.problem)}" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--ink);font-size:13.5px;">
+    <h3 class="section-title" style="margin-top:20px;">Sections</h3>
+    <div class="nea-sections">${rows}</div>
+    <div class="resources" style="margin-top:16px;">
+      <a class="res-link" href="${aqa('non-exam-assessment-the-computing-practical-project').url}" target="_blank" rel="noopener"><span class="dot"></span>AQA NEA specification</a>
+      <a class="res-link" href="${RES.neaGuide.url}" target="_blank" rel="noopener"><span class="dot"></span>${escapeHtml(RES.neaGuide.name)}</a>
+    </div>
+  </div>`;
+}
+
+/* =========================================================================
+   INTERACTION WIRING
+   ========================================================================= */
+function wireInteractions(){
+  document.querySelectorAll('.seg button').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      state.subtopics[btn.dataset.id] = btn.dataset.s;
+      renderRail(); renderOverallHeader(); renderMain();
+      scheduleSave();
+    });
+  });
+  document.querySelectorAll('[data-nea]').forEach(el=>{
+    el.addEventListener('change', updateNea);
+    el.addEventListener('input', updateNea);
+  });
+  const problemEl = document.getElementById('neaProblem');
+  if(problemEl) problemEl.addEventListener('input', e=>{
+    state.nea.problem = e.target.value; scheduleSave();
+  });
+}
+function updateNea(e){
+  const id = e.target.dataset.nea, f = e.target.dataset.f;
+  if(!state.nea.sections[id]) state.nea.sections[id] = {status:'not-started',target:'',notes:''};
+  state.nea.sections[id][f] = e.target.value;
+  if(f==='status'){ renderRail(); renderOverallHeader(); }
+  scheduleSave();
+}
+
+/* =========================================================================
+   BOOT
+   ========================================================================= */
+render();
+initDb();
+</script>

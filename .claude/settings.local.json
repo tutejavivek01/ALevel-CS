@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx --yes create-next-app@latest --help)",
+      "Bash(npx --yes create-next-app@latest . --ts --app --eslint --no-tailwind --import-alias \"@/*\" --use-npm --disable-git --yes)",
+      "Read(//c/Users/tutej/**)",
+      "Bash(npx --yes create-next-app@latest _scaffold_tmp --ts --app --eslint --no-tailwind --import-alias \"@/*\" --use-npm --disable-git --yes)",
+      "Bash(npx --yes create-next-app@latest scaffold-tmp --ts --app --eslint --no-tailwind --import-alias \"@/*\" --use-npm --disable-git --yes)",
+      "Bash(mkdir -p components lib/spec lib/exercises lib/db)",
+      "Bash(touch components/.gitkeep lib/spec/.gitkeep lib/exercises/.gitkeep lib/db/.gitkeep)",
+      "Bash(npm install *)",
+      "Bash(npx playwright *)",
+      "Bash(npm run *)",
+      "Bash(npm uninstall *)"
+    ]
+  }
+}
