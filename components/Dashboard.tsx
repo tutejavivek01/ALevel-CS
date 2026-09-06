@@ -74,6 +74,14 @@ export function Dashboard() {
       </Card>
 
       <ActivityFeed />
+
+      {/* design.md §6.6: insurance, not a feature surface - one link,
+          nothing more. */}
+      <p style={{ textAlign: 'center' }}>
+        <a href="/export" className="btn2 alt">
+          Download my data
+        </a>
+      </p>
     </div>
   );
 }

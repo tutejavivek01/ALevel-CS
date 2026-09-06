@@ -35,7 +35,7 @@ seeding) exist specifically so later tasks don't have to reinvent them.
 - [x] 25. Python problems: submission persistence + attempt history
 - [x] 26. Python problems: review workflow
 - [x] 27. Dashboard: Python due-date banner
-- [ ] 28. Data export
+- [x] 28. Data export
 - [ ] 29. End-to-end polish & sign-off
 
 ---
