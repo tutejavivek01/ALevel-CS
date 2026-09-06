@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Card } from './Card';
 import { ProgressRing } from './ProgressRing';
 import { ActivityFeed } from './ActivityFeed';
-import { NeaDeadlineBanner } from './NeaDeadlineBanner';
+import { DeadlineBanner } from './DeadlineBanner';
 import { useAllSubtopicStatuses } from '@/lib/db/use-all-subtopic-statuses';
 import { overallProgress, topicProgress } from '@/lib/progress';
 import { TOPICS } from '@/lib/spec';
@@ -49,7 +49,7 @@ export function Dashboard() {
         </div>
       </div>
 
-      <NeaDeadlineBanner />
+      <DeadlineBanner />
 
       <Card>
         <h3 className="section-title">Specification map</h3>

@@ -6,6 +6,13 @@
 // within this many days and it isn't yet complete.
 export const NEA_UPCOMING_WINDOW_DAYS = 14;
 
+// requirements.md §8.1/§10, task 27: a separate constant from
+// NEA_UPCOMING_WINDOW_DAYS (same value for now) rather than reusing it
+// directly - Python due dates and NEA target dates are conceptually
+// different deadlines, and this keeps each independently tunable
+// without the other's name implying a scope it doesn't have.
+export const PYTHON_DUE_UPCOMING_WINDOW_DAYS = 14;
+
 // requirements.md §8.4 / design.md §6.7: how long a submission may run
 // before the main thread writes SIGINT into Pyodide's interrupt buffer.
 export const PYTHON_EXEC_TIMEOUT_MS = 5000;

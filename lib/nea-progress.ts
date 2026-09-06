@@ -1,6 +1,7 @@
 import { NEA_SECTIONS, type NeaSection } from './spec/nea';
 import { getNeaSectionState, type NeaStateMap } from './db/use-nea-state';
 import { NEA_UPCOMING_WINDOW_DAYS } from './config';
+import { daysBetween } from './date-utils';
 
 // A floor, not an interpolated estimate: only `complete` sections count.
 // Deliberately labelled "marks-worth complete" wherever shown, never as
@@ -20,11 +21,6 @@ export type NeaDeadline = {
   status: 'upcoming' | 'overdue';
   targetDate: string;
 };
-
-function daysBetween(from: Date, to: Date): number {
-  const msPerDay = 1000 * 60 * 60 * 24;
-  return Math.floor((to.getTime() - from.getTime()) / msPerDay);
-}
 
 // requirements.md §4: sections with a target date that isn't complete
 // yet, either overdue (date has passed) or upcoming (within the window).
