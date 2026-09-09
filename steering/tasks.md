@@ -37,7 +37,7 @@ seeding) exist specifically so later tasks don't have to reinvent them.
 - [x] 27. Dashboard: Python due-date banner
 - [x] 28. Data export
 - [x] 29. End-to-end polish & sign-off
-- [ ] 30. OCR challenge tables: schema + RLS
+- [x] 30. OCR challenge tables: schema + RLS
 - [ ] 31. Best-practice / code-quality checker
 - [ ] 32. OCR challenge content: descriptions
 - [ ] 33. OCR challenge list + static detail page
