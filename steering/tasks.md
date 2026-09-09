@@ -42,7 +42,7 @@ seeding) exist specifically so later tasks don't have to reinvent them.
 - [x] 32. OCR challenge content: descriptions
 - [x] 33. OCR challenge list + static detail page
 - [x] 34. OCR challenge test cases
-- [ ] 35. OCR challenge execution, grading & review
+- [x] 35. OCR challenge execution, grading & review
 - [ ] 36. Code submission via file upload
 - [ ] 37. End-to-end polish & sign-off (OCR challenge set)
 

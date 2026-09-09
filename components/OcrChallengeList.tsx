@@ -3,11 +3,18 @@
 import Link from 'next/link';
 import { Card } from './Card';
 import { OCR_CHALLENGES } from '@/lib/exercises/ocr-challenges';
+import { useOcrChallengeReviewStatuses } from '@/lib/db/use-ocr-challenge-review-statuses';
 
-// Real derived status (not-started/attempted/submitted-for-review/
-// reviewed) lands in task 35 - placeholder until then, matching how
-// PythonProblemList looked before task 26.
+const STATUS_LABEL: Record<string, string> = {
+  'not-started': 'Not started',
+  attempted: 'Attempted',
+  'submitted-for-review': 'Submitted for review',
+  reviewed: 'Reviewed',
+};
+
 export function OcrChallengeList() {
+  const { data: reviewStatuses } = useOcrChallengeReviewStatuses();
+
   return (
     <Card>
       <div className="topic-head">
@@ -18,21 +25,26 @@ export function OcrChallengeList() {
       </div>
 
       <div className="python-list">
-        {OCR_CHALLENGES.map((challenge) => (
-          <Link
-            key={challenge.id}
-            href={`/python/ocr/${challenge.id}`}
-            className="python-row"
-          >
-            <div>
-              <div className="title">
-                {challenge.number}. {challenge.title}
+        {OCR_CHALLENGES.map((challenge) => {
+          const status = reviewStatuses?.[challenge.id] ?? 'not-started';
+          return (
+            <Link
+              key={challenge.id}
+              href={`/python/ocr/${challenge.id}`}
+              className="python-row"
+            >
+              <div>
+                <div className="title">
+                  {challenge.number}. {challenge.title}
+                </div>
+                {!challenge.testCases && <div className="due">Manual review only</div>}
               </div>
-              {!challenge.testCases && <div className="due">Manual review only</div>}
-            </div>
-            <span className="status-badge">Not started</span>
-          </Link>
-        ))}
+              <span className="status-badge" data-status={status}>
+                {STATUS_LABEL[status]}
+              </span>
+            </Link>
+          );
+        })}
       </div>
     </Card>
   );

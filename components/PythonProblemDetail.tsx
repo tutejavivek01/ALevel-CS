@@ -140,7 +140,7 @@ export function PythonProblemDetail({ problemId, initialProblem, initialTestCase
           {result.perTestResults.length > 0 && (
             <ul className="python-result-list">
               {result.perTestResults.map((r, index) => (
-                <li key={r.testCaseId} className={r.passed ? 'pass' : 'fail'}>
+                <li key={r.position} className={r.passed ? 'pass' : 'fail'}>
                   Test {index + 1}: {r.passed ? 'passed' : 'failed'}
                   {!r.passed && <pre className="mono">Got: {r.actualOutput}</pre>}
                 </li>

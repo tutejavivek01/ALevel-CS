@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from './supabase-browser';
 import { useRealtimeTables } from './use-realtime-tables';
 import { usePyodideWorker } from '@/lib/python/use-pyodide-worker';
-import { outputsMatch } from '@/lib/exercises/python-output';
+import { gradeSubmission } from '@/lib/python/grade-submission';
 import type { PythonTestCase } from './use-python-problem';
 
 export type PythonSubmissionResult = {
@@ -65,7 +65,7 @@ export function usePythonSubmissions(problemId: number) {
 // moment before.
 export function useSubmitPythonCode(problemId: number, testCases: PythonTestCase[]) {
   const queryClient = useQueryClient();
-  const { run, check } = usePyodideWorker();
+  const worker = usePyodideWorker();
 
   return useMutation({
     mutationFn: async (code: string) => {
@@ -75,37 +75,12 @@ export function useSubmitPythonCode(problemId: number, testCases: PythonTestCase
       } = await supabase.auth.getUser();
       if (!user) throw new Error('Not signed in');
 
-      const perTestResults: { testCaseId: number; passed: boolean; actualOutput: string }[] = [];
-      let overallResult: PythonSubmission['overall_result'] = 'pass';
-      let errorMessage: string | null = null;
-
-      for (const testCase of testCases) {
-        const result = await run(code, testCase.input);
-
-        if (result.outcome === 'timeout') {
-          overallResult = 'timeout';
-          break;
-        }
-        if (result.outcome === 'error') {
-          overallResult = 'error';
-          errorMessage = result.traceback;
-          break;
-        }
-
-        const passed = outputsMatch(result.stdout, testCase.expected_output);
-        perTestResults.push({ testCaseId: testCase.id, passed, actualOutput: result.stdout });
-        // Wrong output on one case doesn't stop the run - every test
-        // case still gets graded, matching task 25's "graded correctly
-        // against all test cases" (a timeout/error genuinely can't
-        // continue, since the program itself hung or crashed).
-        if (!passed && overallResult === 'pass') overallResult = 'fail';
-      }
-
-      // One check per submission, not per test case (design.md
-      // §6.7/§6.8) - it inspects the submitted source itself, so
-      // repeating it per test case would just recompute the same
-      // answer. Advisory only: never affects overallResult above.
-      const bestPracticeFindings = await check(code);
+      const gradableTestCases = testCases.map((tc) => ({
+        input: tc.input,
+        expectedOutput: tc.expected_output,
+      }));
+      const { overallResult, perTestResults, errorMessage, bestPracticeFindings } =
+        await gradeSubmission(code, gradableTestCases, worker);
 
       const { data: submission, error } = await supabase
         .from('python_submissions')
@@ -125,7 +100,7 @@ export function useSubmitPythonCode(problemId: number, testCases: PythonTestCase
         const { error: resultsError } = await supabase.from('python_submission_results').insert(
           perTestResults.map((r) => ({
             submission_id: submission.id,
-            test_case_id: r.testCaseId,
+            test_case_id: testCases[r.position].id,
             passed: r.passed,
             actual_output: r.actualOutput,
           }))

@@ -28,16 +28,16 @@ test('the /python list shows both custom problems and all 80 OCR challenges as t
   await expect(page.getByText('80. Happy Hopper')).toBeVisible();
 });
 
-test('a challenge renders its correct content and a working, disabled-for-now editor', async ({
-  page,
-}) => {
+test('a challenge renders its correct content and a working editor', async ({ page }) => {
   const challenge = OCR_CHALLENGES.find((c) => c.id === 'ocr-fizz-buzz')!;
   await page.goto(`/python/ocr/${challenge.id}`);
 
   await expect(page.getByRole('heading', { name: challenge.title })).toBeVisible();
   await expect(page.locator('.blurb')).toContainText('replicates the famous game Fizz Buzz');
   await expect(page.locator('.cm-content')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Run' })).toBeDisabled();
+  // fizz-buzz got real test cases in task 34, so Run is enabled here -
+  // execution itself is covered by ocr-challenge-execution.spec.ts.
+  await expect(page.getByRole('button', { name: 'Run' })).toBeEnabled();
 });
 
 test('a challenge with no test cases yet shows the manual-review note', async ({ page }) => {
