@@ -18,18 +18,28 @@ async function fetchOcrChallengeReviewStatuses(): Promise<Record<string, PythonR
   const supabase = createClient();
   const [
     { data: submissions, error: submissionsError },
+    { data: versions, error: versionsError },
     { data: reviewStates, error: reviewStatesError },
     { data: reviews, error: reviewsError },
   ] = await Promise.all([
     supabase.from('ocr_challenge_submissions').select('challenge_id'),
+    supabase.from('ocr_challenge_code_versions').select('challenge_id'),
     supabase.from('ocr_challenge_review_state').select('challenge_id, submitted_for_review_at'),
     supabase.from('ocr_challenge_reviews').select('challenge_id, created_at'),
   ]);
   if (submissionsError) throw submissionsError;
+  if (versionsError) throw versionsError;
   if (reviewStatesError) throw reviewStatesError;
   if (reviewsError) throw reviewsError;
 
-  const hasSubmissions = new Set(submissions.map((s) => s.challenge_id));
+  // A manual-review-only challenge (no test cases, so never gets a Run-
+  // produced submission) can still reach 'attempted' purely via Save
+  // (design.md §6.10, requirements.md §8.12) - this is the fix for that
+  // previously-real gap.
+  const hasSubmissions = new Set([
+    ...submissions.map((s) => s.challenge_id),
+    ...versions.map((v) => v.challenge_id),
+  ]);
   const submittedForReviewAt = new Map(
     reviewStates.map((s) => [s.challenge_id, s.submitted_for_review_at] as const)
   );
@@ -59,7 +69,12 @@ export function useOcrChallengeReviewStatuses() {
   const query = useQuery({ queryKey, queryFn: fetchOcrChallengeReviewStatuses });
 
   useRealtimeTables(
-    ['ocr_challenge_submissions', 'ocr_challenge_review_state', 'ocr_challenge_reviews'],
+    [
+      'ocr_challenge_submissions',
+      'ocr_challenge_code_versions',
+      'ocr_challenge_review_state',
+      'ocr_challenge_reviews',
+    ],
     () => {
       queryClient.invalidateQueries({ queryKey });
     }

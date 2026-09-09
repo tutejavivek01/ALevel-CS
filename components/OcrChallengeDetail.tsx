@@ -14,6 +14,12 @@ import {
   useOcrChallengeReviewState,
   useSubmitOcrChallengeForReview,
 } from '@/lib/db/use-ocr-challenge-reviews';
+import {
+  useOcrChallengeCodeVersions,
+  useSaveOcrChallengeCodeVersion,
+  type OcrChallengeCodeVersion,
+} from '@/lib/db/use-ocr-challenge-code-versions';
+import { useAddOcrChallengeVersionComment } from '@/lib/db/use-ocr-challenge-version-comments';
 import { useCurrentProfile } from '@/lib/db/use-current-profile';
 import { deriveReviewStatus } from '@/lib/exercises/python-review-status';
 import { PYTHON_EXEC_TIMEOUT_MS } from '@/lib/config';
@@ -64,20 +70,99 @@ function ReviewForm({ onAdd }: { onAdd: (body: string) => void }) {
   );
 }
 
+// Feedback on one specific saved version (design.md §6.10) - the same
+// shape as ReviewForm above, scoped to a version instead of the whole
+// challenge.
+function VersionCommentForm({ onAdd }: { onAdd: (body: string) => void }) {
+  const [draft, setDraft] = useState('');
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        const trimmed = draft.trim();
+        if (trimmed) {
+          onAdd(trimmed);
+          setDraft('');
+        }
+      }}
+      style={{ display: 'flex', gap: 8, marginTop: 8 }}
+    >
+      <input
+        type="text"
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        placeholder="Comment on this version…"
+        style={{ flex: 1 }}
+      />
+      <button type="submit" className="btn2 alt">
+        Add comment
+      </button>
+    </form>
+  );
+}
+
+function VersionRow({ challengeId, version }: { challengeId: string; version: OcrChallengeCodeVersion }) {
+  const { profile } = useCurrentProfile();
+  const addComment = useAddOcrChallengeVersionComment(challengeId, version.id);
+
+  return (
+    <div className="version-row">
+      <span className="mono" style={{ fontSize: 11, color: 'var(--muted)' }}>
+        {new Date(version.created_at).toLocaleString()}
+      </span>
+      <pre className="mono">{version.code}</pre>
+      {version.syntax_error && (
+        <div className="version-syntax-error">
+          <div className="field-label">Syntax error</div>
+          <pre>{version.syntax_error}</pre>
+        </div>
+      )}
+      {version.best_practice_findings.length > 0 && (
+        <div className="version-best-practice-panel">
+          <div className="field-label">Best-practice suggestions</div>
+          <ul className="version-best-practice-list">
+            {version.best_practice_findings.map((finding, index) => (
+              <li key={index}>{finding}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {version.ocr_challenge_version_comments.length > 0 && (
+        <div className="version-comments">
+          {version.ocr_challenge_version_comments.map((comment) => (
+            <p key={comment.id} style={{ fontSize: 12.5, margin: 0 }}>
+              <span style={{ color: 'var(--ink-dim)' }}>{comment.body}</span>{' '}
+              <span className="mono" style={{ color: 'var(--muted)', fontSize: 11 }}>
+                {new Date(comment.created_at).toLocaleString()}
+              </span>
+            </p>
+          ))}
+        </div>
+      )}
+      {profile?.role === 'supporter' && (
+        <VersionCommentForm onAdd={(body) => addComment.mutate(body)} />
+      )}
+    </div>
+  );
+}
+
 export function OcrChallengeDetail({ challenge }: Props) {
   const testCases = challenge.testCases ?? [];
   const { data: submissions } = useOcrChallengeSubmissions(challenge.id);
+  const { data: versions } = useOcrChallengeCodeVersions(challenge.id);
   const { data: reviews } = useOcrChallengeReviews(challenge.id);
   const { data: reviewState } = useOcrChallengeReviewState(challenge.id);
   const { profile } = useCurrentProfile();
   const [code, setCode] = useState(challenge.starterCode ?? '');
   const submit = useSubmitOcrChallengeCode(challenge.id, testCases);
+  const saveVersion = useSaveOcrChallengeCodeVersion(challenge.id);
   const submitForReview = useSubmitOcrChallengeForReview(challenge.id);
   const addReview = useAddOcrChallengeReview(challenge.id);
 
   const result = submit.data;
+  const hasAttempts = (submissions ?? []).length > 0 || (versions ?? []).length > 0;
   const status = deriveReviewStatus({
-    hasSubmissions: (submissions ?? []).length > 0,
+    hasSubmissions: hasAttempts,
     submittedForReviewAt: reviewState?.submitted_for_review_at ?? null,
     latestReviewAt: (reviews ?? [])[0]?.created_at ?? null,
   });
@@ -142,13 +227,20 @@ export function OcrChallengeDetail({ challenge }: Props) {
       </h3>
       <PythonEditor value={code} onChange={setCode} />
 
-      {testCases.length > 0 && (
-        <div className="ex-actions">
+      <div className="ex-actions">
+        {testCases.length > 0 && (
           <button className="btn2" onClick={() => submit.mutate(code)} disabled={submit.isPending}>
             {submit.isPending ? 'Running…' : 'Run'}
           </button>
-        </div>
-      )}
+        )}
+        <button
+          className="btn2 alt"
+          onClick={() => saveVersion.mutate(code)}
+          disabled={saveVersion.isPending}
+        >
+          {saveVersion.isPending ? 'Saving…' : 'Save'}
+        </button>
+      </div>
 
       {result && (
         <div className={`python-output ${result.overallResult}`}>
@@ -217,12 +309,22 @@ export function OcrChallengeDetail({ challenge }: Props) {
         ))}
       </div>
 
+      <h3 className="section-title" style={{ marginTop: 20 }}>
+        Saved versions
+      </h3>
+      {(versions ?? []).length === 0 && <p className="empty-note">No saved versions yet.</p>}
+      <div className="version-list">
+        {(versions ?? []).map((version) => (
+          <VersionRow key={version.id} challengeId={challenge.id} version={version} />
+        ))}
+      </div>
+
       {profile?.role === 'student' && (
         <div className="ex-actions">
           <button
             className="btn2 alt"
             onClick={() => submitForReview.mutate()}
-            disabled={submitForReview.isPending || (submissions ?? []).length === 0}
+            disabled={submitForReview.isPending || !hasAttempts}
           >
             Submit for review
           </button>
