@@ -1,44 +1,16 @@
 import { config } from 'dotenv';
 import path from 'node:path';
 import { test, expect } from '@playwright/test';
-import { createClient } from '@supabase/supabase-js';
 
 config({ path: path.join(process.cwd(), '.env.local'), quiet: true });
 
+// Retired the python_problems-backed setup this test used to create for
+// itself along with that flow (design.md §6.9, requirements.md §8.11) -
+// the execution pipeline itself is entirely shared with the OCR flow, so
+// this now runs against the real, fixed ocr-factorial-finder challenge.
 test('a correct program shows its output, a buggy one shows a real traceback, and pyodide is not reloaded on the second run', async ({
   page,
 }) => {
-  const supporter = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-  await supporter.auth.signInWithPassword({
-    email: process.env.E2E_SUPPORTER_EMAIL!,
-    password: process.env.E2E_SUPPORTER_PASSWORD!,
-  });
-  const {
-    data: { user },
-  } = await supporter.auth.getUser();
-
-  const uniqueTitle = `Pyodide-exec test ${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  const { data: problem } = await supporter
-    .from('python_problems')
-    .insert({
-      title: uniqueTitle,
-      description: 'Run a program.',
-      starter_code: 'print("unused")',
-      created_by: user!.id,
-    })
-    .select()
-    .single();
-
-  await supporter.from('python_test_cases').insert({
-    problem_id: problem!.id,
-    position: 0,
-    input: '',
-    expected_output: 'hello world\n',
-  });
-
   await page.goto('/login');
   await page.getByLabel('Email').fill(process.env.E2E_STUDENT_EMAIL!);
   await page.getByLabel('Password').fill(process.env.E2E_STUDENT_PASSWORD!);
@@ -50,12 +22,12 @@ test('a correct program shows its output, a buggy one shows a real traceback, an
     if (request.url().endsWith('pyodide.asm.wasm')) wasmRequestCount++;
   });
 
-  await page.goto(`/python/${problem!.id}`);
+  await page.goto('/python/ocr/ocr-factorial-finder');
 
   const editor = page.locator('.cm-content');
   await editor.click();
   await page.keyboard.press('Control+A');
-  await page.keyboard.type('print("hello world")');
+  await page.keyboard.type('import math\nprint(math.factorial(int(input())))');
   await page.getByRole('button', { name: 'Run' }).click();
 
   // Generous timeout - this run pays Pyodide's one-time load/init cost.

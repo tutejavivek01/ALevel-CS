@@ -60,8 +60,18 @@ erDiagram
     python_test_cases ||--o{ python_submission_results : checked_against
     profiles ||--o{ ocr_challenge_submissions : submits
     profiles ||--o{ ocr_challenge_reviews : reviews
+    profiles ||--o{ ocr_challenge_review_state : sets_due_date_or_submits
+    profiles ||--o{ ocr_challenge_code_versions : saves
+    profiles ||--o{ ocr_challenge_version_comments : comments
     ocr_challenge_submissions ||--o{ ocr_challenge_submission_results : has
+    ocr_challenge_code_versions ||--o{ ocr_challenge_version_comments : has
 ```
+
+(`ocr_challenge_review_state` and its `ocr_challenge_code_versions`/
+`ocr_challenge_version_comments` additions are new to this diagram as of
+requirements.md §8.11–§8.13 — `ocr_challenge_review_state` itself
+pre-dates this round but was missing from the ERD even though it already
+existed in §2.2; added now while touching this area.)
 
 ### 2.2 Tables
 
@@ -228,24 +238,78 @@ ocr_challenge_submission_results (
   actual_output      text not null
 )
 
--- Only column besides the key is submitted_for_review_at, and it's
--- entirely student-owned - unlike python_problems there's no
--- supporter-owned content column on this same row (title/description
--- are code-defined, not stored), so this needs a single student-only
--- policy and no column-scoping trigger (contrast with §3.2).
+-- due_date added for requirements.md §8.13: unlike submitted_for_review_at
+-- (student-only), due_date is jointly editable by either role - the same
+-- column-scoping problem §3.2 already solved for python_problems, just
+-- with the restricted side flipped (there, students were restricted to
+-- one column; here, supporters are). See §6.11 and the
+-- guard_ocr_challenge_review_state_supporter_write trigger below.
 ocr_challenge_review_state (
   challenge_id            text primary key,
+  due_date                date,
   submitted_for_review_at timestamptz,
   updated_by              uuid not null references profiles(id)
 )
 
+-- A supporter may insert/update this row (to set due_date on a challenge
+-- the student hasn't touched yet) but may never set or change
+-- submitted_for_review_at - mirrors guard_python_problems_student_update
+-- (§3.2) with the roles' restriction inverted.
+create or replace function guard_ocr_challenge_review_state_supporter_write()
+returns trigger as $$
+begin
+  if is_role('supporter') and not is_role('student') then
+    if new.submitted_for_review_at is distinct from
+       (case when tg_op = 'INSERT' then null else old.submitted_for_review_at end)
+    then
+      raise exception 'supporters may only set due_date on ocr_challenge_review_state';
+    end if;
+  end if;
+  return new;
+end;
+$$ language plpgsql security definer set search_path = public;
+
 -- Parent feedback (§8.6/§8.8) - same shape and role split as
--- python_problem_reviews; see the updated §2.3 for why this is a fourth
--- small table rather than a merge.
+-- python_problem_reviews; see the updated §2.3 for why this is a small
+-- table rather than a merge. Stays challenge-level (not version-scoped)
+-- - see ocr_challenge_version_comments below for the new, separate
+-- per-version feedback channel (§8.12/§6.10). This table's meaning and
+-- its role in deriveReviewStatus() are otherwise completely unchanged.
 ocr_challenge_reviews (
   id           bigserial primary key,
   challenge_id text not null,
   body         text,
+  created_by   uuid not null references profiles(id),
+  created_at   timestamptz not null default now()
+)
+
+-- Saved code checkpoints (§6.10, requirements.md §8.12). Independent of
+-- ocr_challenge_submissions: a version never grades against test cases
+-- and never requires the code to run cleanly. syntax_error is populated
+-- from the same worker round trip as best_practice_findings (a single
+-- {type: 'check', code} message, extended to surface a caught
+-- SyntaxError's text instead of discarding it) - not a full execution
+-- attempt, which would need stdin most challenges don't have and would
+-- misreport every input()-calling program as "erroring" for no reason.
+ocr_challenge_code_versions (
+  id                     bigserial primary key,
+  challenge_id           text not null,
+  code                   text not null,
+  syntax_error           text,
+  best_practice_findings text[] not null default '{}',
+  saved_by               uuid not null references profiles(id),
+  created_at             timestamptz not null default now()
+)
+
+-- Supporter feedback on one specific saved version (§6.10,
+-- requirements.md §8.12) - a new, separate table rather than a nullable
+-- version_id added to ocr_challenge_reviews, so the existing
+-- challenge-level review thread and reviewed-status derivation stay
+-- completely untouched.
+ocr_challenge_version_comments (
+  id           bigserial primary key,
+  version_id   bigint not null references ocr_challenge_code_versions(id) on delete cascade,
+  body         text not null,
   created_by   uuid not null references profiles(id),
   created_at   timestamptz not null default now()
 )
@@ -262,20 +326,23 @@ activity_events (
 )
 ```
 
-### 2.3 Why four small comment-shaped tables, not one generic one
+### 2.3 Why five small comment-shaped tables, not one generic one
 
-`subtopic_flags`, `nea_notes`, `python_problem_reviews`, and (§6.8)
-`ocr_challenge_reviews` all have the same shape (body + author +
-timestamp). A single polymorphic `comments` table (with a
-`target_type`/`target_id` pair) would remove that repetition — but it
+`subtopic_flags`, `nea_notes`, `python_problem_reviews`, `ocr_challenge_reviews`,
+and now (§6.10) `ocr_challenge_version_comments` all have the same shape
+(body + author + timestamp). A single polymorphic `comments` table (with
+a `target_type`/`target_id` pair) would remove that repetition — but it
 would also mean every RLS policy on it has to branch on `target_type` to
 decide who's allowed to write, and every query needs a runtime cast
-instead of a typed foreign key. Four small tables keep each RLS policy a
+instead of a typed foreign key. Five small tables keep each RLS policy a
 one-line role check and each TypeScript query fully typed. This is the
 same "three similar lines beats a premature abstraction" call as
 `CLAUDE.md`'s general guidance — worth naming explicitly since the
 repetition is easy to spot and "fix" later, and worth re-confirming each
 time a new table joins the pattern rather than assuming it still holds.
+`ocr_challenge_version_comments` joining the pattern here, rather than
+becoming the polymorphic table's first real justification, is that
+re-confirmation.
 
 ## 3. Auth & permissions
 
@@ -324,13 +391,18 @@ either role, matching requirements.md §4's "jointly managed" framing —
 their policies check only that `auth.uid()` matches *some* profile, not a
 specific role.
 
-The fixed OCR challenge set's tables (§6.8) follow the identical role
-split — `ocr_challenge_submissions`/`ocr_challenge_submission_results`/
-`ocr_challenge_review_state` are student-only writes,
-`ocr_challenge_reviews` is supporter-only — with one simplification over
-`python_problems`: `ocr_challenge_review_state` has no supporter-owned
-column to protect, so it needs no column-scoping trigger, just a plain
-student-only insert/update policy.
+The fixed OCR challenge set's tables (§6.8) mostly follow the identical
+role split — `ocr_challenge_submissions`/`ocr_challenge_submission_results`
+are student-only writes, `ocr_challenge_reviews` is supporter-only,
+`ocr_challenge_code_versions` (§6.10) is student-only,
+`ocr_challenge_version_comments` (§6.10) is supporter-only. The one
+exception is `ocr_challenge_review_state` (§6.11): since `due_date` was
+added, it's now writable by **either** role, unlike everything else in
+this list — the opposite of `python_problems`' original problem (there, a
+student needed to write one column on an otherwise supporter-owned row;
+here, a supporter needs to write one column on an otherwise
+student-owned row), solved with the same column-scoping-trigger technique
+in reverse (§2.2, §6.11).
 
 ### 3.3 Sessions
 
@@ -381,34 +453,37 @@ worth a quick decision before build starts.
 ```
 /login                          Supabase Auth sign-in (no public sign-up)
 /                                Dashboard: overall %, focus banner, NEA
-                                 deadline banner, Python due-date banner,
-                                 activity trail (§6)
+                                 deadline banner, OCR challenge due-date
+                                 banner (§6.11 - was the supporter-
+                                 authored problems' due dates before
+                                 §6.9), activity trail (§6)
 /topic/[topicId]                Checklist + curated & personal resources
                                  + supporter flags
 /nea                             Six-section tracker, notes log, deadline
                                  state, marks-worth-complete figure
 /practice/theory-of-computation  Trace tables, FSM step-tracer, glossary
-/python                          Problem list: supporter-authored
-                                 problems and the fixed OCR challenge set
-                                 as two distinct groups (due dates, review
-                                 status)
-/python/[problemId]              Supporter-authored problem: description,
-                                 test cases, code editor, run/submit,
-                                 attempt history, reviews
-/python/ocr/[challengeId]        Fixed OCR challenge: description (+
-                                 image where the booklet has one), test
+/python                          The fixed OCR challenge set, as a single
+                                 list (requirements.md §8.11 retires the
+                                 supporter-authored list from this page;
+                                 due dates, review status)
+/python/ocr/[challengeId]        Fixed OCR challenge: description, test
                                  cases where auto-gradable, code editor,
-                                 run/submit or review-only, attempt
-                                 history, reviews
-/python/new                      Supporter-only problem creation form
+                                 run/submit or review-only, due date
+                                 (jointly editable, §6.11), saved-version
+                                 history + per-version comments (§6.10),
+                                 attempt history, reviews
 /export                          Triggers the JSON data export (§10)
 ```
 
+`/python/[problemId]` and `/python/new` are removed as of §6.9
+(requirements.md §8.11) — the supporter-authored problem-creation form
+and its detail/run page are no longer reachable through the app. The
+underlying `python_*` tables and any rows already in them are untouched
+(§6.9).
+
 Route protection: a Next.js middleware checks for a valid Supabase
-session on every route except `/login`; `/python/new` additionally checks
-`role = 'supporter'` server-side before rendering (not just hiding the
-link in the nav) — the same "enforce it at the boundary, not just the UI"
-principle as the RLS policies in §3.2.
+session on every route except `/login` — the same "enforce it at the
+boundary, not just the UI" principle as the RLS policies in §3.2.
 
 ## 6. Feature designs
 
@@ -508,9 +583,19 @@ one shared record, both accounts export the same complete dataset. No
 UI beyond a "Download my data" button — this is insurance, not a feature
 surface to design further.
 
-### 6.7 Python practice problems (req. §8)
+### 6.7 Python practice problems (req. §8) — authoring UI retired, pipeline still live
 
-**Problem authoring** (`/python/new`, supporter-only): a form writing one
+**Retired as of §6.9 (requirements.md §8.11)**: the "Problem authoring"
+and "Review workflow" subsections immediately below describe the
+supporter-authored ("custom") problem flow specifically, which no longer
+has a UI. They're kept here as accurate historical documentation of the
+retained-but-hidden `python_*` schema (§6.9), not as live design. The
+**execution pipeline** subsection below them is different — it describes
+the shared Pyodide/Web-Worker/timeout/best-practice-check machinery that
+`/python/ocr/[challengeId]` (§6.8) still uses in full today; nothing in
+that subsection is retired.
+
+**Problem authoring** (`/python/new`, supporter-only, retired — §6.9): a form writing one
 `python_problems` row plus its `python_test_cases` rows in one submit.
 Test cases are visible to the student in full (input *and* expected
 output) — there's no hidden-test-case concept. This is a deliberate
@@ -594,8 +679,9 @@ past a timeout or error, is the right behavior.)
   `ast` only exists inside the Pyodide runtime, not in TypeScript), so
   it's added as a sibling Python function in that file, not a new module.
 
-**Review workflow** — designed as derived state, not a manually-shared
-status column:
+**Review workflow** (retired UI — §6.9; `deriveReviewStatus()` itself
+lives on, reused unchanged by §6.8's OCR flow) — designed as derived
+state, not a manually-shared status column:
 
 | Condition | Effective status |
 |---|---|
@@ -669,21 +755,148 @@ status is the exact same function, fed from
 `ocr_challenge_submissions`/`ocr_challenge_review_state`/
 `ocr_challenge_reviews` instead of the parent-authored tables.
 
-**List page**: `/python` renders two visually distinct groups on the same
-page — supporter-authored problems, then the fixed OCR set — the same
-"two distinct lists, kept visually separate" treatment already used for
-curated vs. personal resource links (§6.2), not a second nav item or
-route. A challenge with no `testCases` shows no "Run" affordance at all
-on its detail page (the manual-review-only group from requirements.md
-§8.8) — submitted code goes straight into the same review workflow as
-every other problem (above), just with nothing to grade first.
+**List page**: `/python` renders a single list — the fixed OCR set —
+since §6.9 retires the supporter-authored list this page used to also
+show. A challenge with no `testCases` shows no "Run" affordance at all on
+its detail page (the manual-review-only group from requirements.md §8.8)
+— submitted code goes straight into the same review workflow as every
+other problem (above), just with nothing to grade first.
 
-**RLS** follows the same role split as §3.2, with one simplification:
-`ocr_challenge_review_state` has only one column besides its key
-(`submitted_for_review_at`), and that column is entirely student-owned —
-unlike `python_problems`, there's no supporter-owned column on the same
-row to protect from a student overwrite, so it needs a single
-student-only insert/update policy and no column-scoping trigger.
+**RLS** follows the same role split as §3.2. As of §6.11,
+`ocr_challenge_review_state` is the one exception to "student-only
+insert/update": its new `due_date` column is writable by either role, so
+it now needs the same column-scoping-trigger technique as
+`python_problems` (§3.2) — see §2.2's
+`guard_ocr_challenge_review_state_supporter_write`.
+
+### 6.9 Retiring the ad hoc problem source (req. §8.11)
+
+Requirements.md left "hidden but retained" deliberately open at the
+design level. The decision here: **delete the dead UI code, keep every
+byte of data.**
+
+- **Deleted**: `app/(app)/python/new/page.tsx`,
+  `app/(app)/python/[problemId]/page.tsx`, `components/PythonProblemForm.tsx`,
+  `components/PythonProblemList.tsx`, `components/PythonProblemDetail.tsx`,
+  `lib/db/use-python-problems.ts`, `lib/db/use-python-problem.ts`,
+  `lib/db/use-python-submissions.ts`, `lib/db/use-python-reviews.ts`,
+  `lib/db/use-python-review-statuses.ts`, and the custom-only Playwright
+  specs (`python-problems.spec.ts`, `python-problem-detail.spec.ts`,
+  `python-submissions.spec.ts`, `python-review.spec.ts`,
+  `python-deadlines.spec.ts`, `__tests__/python-deadlines.test.ts`).
+  `app/(app)/python/page.tsx` is edited (renders only `OcrChallengeList`),
+  not deleted. `python-best-practice.spec.ts` and
+  `python-file-upload.spec.ts` are edited to drop their `python_problems`
+  scenario, keeping only the OCR one each already had.
+  `lib/python-deadlines.ts` and `DeadlineBanner.tsx` are **edited, not
+  deleted** — repurposed for OCR due dates instead (§6.11), since
+  deadline-surfacing itself isn't retired, only its old data source is.
+  `CLAUDE.md`/`conventions.md`'s own "if you're certain something is
+  unused, delete it completely" applies to everything else in this list:
+  each has zero remaining callers once the route is gone.
+- **Kept, unchanged**: every `python_problems`/`python_test_cases`/
+  `python_submissions`/`python_submission_results`/`python_problem_reviews`
+  migration, table, RLS policy, and row already in the database.
+  Reintroducing the feature later needs new UI code, not a new migration
+  or a data-recovery step.
+- **Kept, unchanged, because they're shared with the OCR flow**:
+  `components/PythonEditor.tsx`, `lib/python/grade-submission.ts`,
+  `lib/python/pyodide-protocol.ts`, `lib/python/use-pyodide-worker.ts`,
+  `lib/exercises/python-output.ts`, `lib/exercises/python-review-status.ts`,
+  `lib/config.ts`'s `PYTHON_EXEC_TIMEOUT_MS`, and the `__tests__` files
+  that test these shared helpers directly.
+
+### 6.10 Saved code versions & per-version comments (req. §8.12)
+
+**Save** is a new button next to (not replacing) Run, on every OCR
+challenge detail page regardless of whether it has test cases. Clicking
+it:
+
+1. Inserts one row into `ocr_challenge_code_versions` (§2.2) with the
+   editor's current code and `saved_by` the current user — always
+   succeeds, since there's nothing to grade and nothing that must pass.
+2. Sends the code through the **same** `{type: 'check', code}` worker
+   round trip the best-practice checker already uses (§6.7) — reused,
+   not duplicated, and extended in one way: `CHECKER_SOURCE`'s
+   `except SyntaxError` branch, which today silently returns
+   `{findings: []}`, is changed to also return the caught exception's
+   text as `syntaxError`. The version row stores both
+   `best_practice_findings` and `syntax_error` from this one response.
+3. Deliberately **does not** attempt a real execution (no `{type: 'run'}`
+   message). A full run needs stdin, and most challenges' correct
+   programs call `input()` at least once — running with empty/no stdin
+   would raise a spurious `StopIteration`-style error on essentially
+   every save of otherwise-correct code, misreporting "doesn't run
+   cleanly" for code that's actually fine once given real input. A
+   syntax check has no such false-positive mode: it only ever flags code
+   that's genuinely malformed, which is what requirements.md §8.12's
+   "if the code doesn't run cleanly" is really guarding against for a
+   checkpoint action (a full correctness check is what Run is for).
+
+**Save is fully independent of Run** (resolving requirements.md §10's
+open question in favor of "no implicit linkage"): a Run's pass/fail
+result already gets its own permanent row in `ocr_challenge_submissions`
+— that's a different kind of record for a different purpose (grading),
+and conflating the two would mean every Run also has to decide what
+"version" language to show it under. Two clicks, two tables, two
+purposes; a student who wants both effects clicks both buttons.
+
+**Visibility**: the challenge detail page renders a version-history list
+(newest first, same as attempt history) showing each version's actual
+code (§8.12's second gap — attempt history today shows only metadata),
+`syntax_error` if present, `best_practice_findings` if any, and any
+comments on it. Both roles see the same list — `select` is open, matching
+every other OCR table.
+
+**Per-version comments**: a supporter viewing a version can add one via a
+small form under that version (mirroring `ReviewForm` in
+`OcrChallengeDetail.tsx`, but scoped to one `version_id` instead of a
+`challenge_id`), inserting into `ocr_challenge_version_comments`
+(§2.2, supporter-only insert). This is **additive** to the existing
+challenge-level `ocr_challenge_reviews`/`ReviewForm` — that thread and
+its role in `deriveReviewStatus()`'s `reviewed` state are unchanged.
+Resolving requirements.md §10's open question: `reviewed` keeps its
+current "at least one challenge-level review exists after the latest
+submit-for-review" meaning; per-version comments are a separate, more
+granular feedback channel alongside it, not a replacement for it.
+
+**"Attempted" status now also considers versions**: `deriveReviewStatus()`
+itself (`lib/exercises/python-review-status.ts`) is unchanged — it still
+just takes a `hasSubmissions` boolean — but the OCR status-aggregation
+hook (`use-ocr-challenge-review-statuses.ts`) now computes that boolean
+as `submissions.length > 0 || versions.length > 0`, closing requirements
+§8.12's first gap: a manual-review-only challenge (no test cases, so
+never gets an `ocr_challenge_submissions` row from Run) can now reach
+`attempted` purely by the student saving a version. "Submit for review"'s
+disabled condition in `OcrChallengeDetail.tsx` is updated the same way.
+
+### 6.11 Due dates on OCR challenges (req. §8.13)
+
+`due_date` lives on `ocr_challenge_review_state` (§2.2) — one shared
+value per challenge, not per account, consistent with §1's "one shared
+progress record." Either role can set it via a small date-picker control
+on the challenge detail page. RLS: both insert and update policies now
+check `is_role('student') or is_role('supporter')`, with
+`guard_ocr_challenge_review_state_supporter_write` (§2.2) rejecting any
+supporter-originated write that also touches `submitted_for_review_at` —
+the same column-scoping-trigger technique as `python_problems` (§3.2),
+with the restricted role flipped.
+
+**Overdue flag**: a challenge whose `due_date` has passed and whose
+derived status (§6.8/§6.10) is not `reviewed` gets a distinct visual
+treatment on both the list page and its own detail page — reusing the
+existing `.overdue`-style treatment already defined for NEA sections and
+the (retired, §6.9) parent-authored Python problems, not a new CSS
+pattern.
+
+**Dashboard banner**: `DeadlineBanner.tsx` and `lib/python-deadlines.ts`'s
+`getPythonDeadlines()` are repurposed rather than deleted —
+`getPythonDeadlines()` becomes `getOcrChallengeDeadlines()`, reading
+`ocr_challenge_review_state.due_date` joined against `OCR_CHALLENGES`
+(for the title) instead of `python_problems`. The banner's upcoming/
+overdue thresholds are unchanged (reuses `NEA_UPCOMING_WINDOW_DAYS`,
+§6.3) — resolving requirements.md §10's open question in favor of
+reusing the existing window rather than a new one.
 
 ## 7. Cross-cutting: save reliability pattern (principles.md §1)
 
@@ -724,7 +937,14 @@ Concrete targets, extending `conventions.md`'s general split:
   known-good and a known-bad code snippet submitted through the real UI —
   like the rest of the execution pipeline, this can only be verified by
   actually running Python in a real browser, not in Vitest, which has no
-  Pyodide runtime available (§6.8).
+  Pyodide runtime available (§6.8); `/python/new` and `/python/[problemId]`
+  404 (or redirect) post-retirement (§6.9); a manual-review-only challenge
+  reaches `attempted` purely via Save, with no Run ever happening (§6.10);
+  a saved version's code and syntax error are visible on both accounts'
+  sessions; a supporter's per-version comment appears live without
+  affecting the challenge-level `reviewed` status; either account can set
+  a due date and the other sees it live; an overdue, un-reviewed
+  challenge shows the distinct flag and a reviewed one doesn't (§6.11).
 
 ## 9. Design decisions made now, flagged for confirmation
 
@@ -764,3 +984,36 @@ silently decided:
 11. File upload reads a `.py` file's contents client-side into the
     existing editor state; there's no server-side file storage and no new
     upload endpoint. §6.7, requirements.md §8.9.
+12. The ad hoc problem source's UI code (route, form, list/detail
+    components, custom-only data hooks, custom-only Playwright specs) is
+    deleted outright; its database tables, RLS policies, and existing
+    rows are left completely untouched. §6.9, requirements.md §8.11.
+13. Saved code versions are a new table (`ocr_challenge_code_versions`),
+    not a repurposed `ocr_challenge_submissions` — a version never grades
+    against test cases and must work for challenges that have none. §6.10.
+14. A version's "doesn't run cleanly" signal is a **syntax check**
+    (`ast.parse` via the existing best-practice worker round trip), not a
+    full execution attempt — a full run would need stdin most challenges'
+    correct programs consume via `input()`, which would misreport
+    otherwise-correct code as erroring on every save. §6.10.
+15. Per-version supporter comments are a new table
+    (`ocr_challenge_version_comments`) rather than a nullable `version_id`
+    added to `ocr_challenge_reviews` — keeps the existing challenge-level
+    review thread and `reviewed`-status derivation completely unchanged;
+    version comments are additive, not a replacement. §6.10, resolves
+    requirements.md §10's open question.
+16. Save and Run stay fully independent — a Run's graded result already
+    has its own permanent row, so nothing implicitly creates a version
+    and nothing implicitly creates a submission. §6.10, resolves
+    requirements.md §10's open question.
+17. `due_date` is added as a column on the existing
+    `ocr_challenge_review_state` (one shared value per challenge), not a
+    new table — protected by a column-scoping trigger that restricts
+    supporter writes to that one column, the mirror image of
+    `python_problems`' existing trigger. §6.11.
+18. The OCR due-date overdue flag reuses the existing NEA-style overdue
+    treatment and the existing `NEA_UPCOMING_WINDOW_DAYS` threshold rather
+    than inventing new ones; the dashboard's Python due-date banner is
+    repurposed to read OCR due dates instead of (not alongside) the
+    retired parent-authored ones. §6.11, resolves requirements.md §10's
+    open questions.

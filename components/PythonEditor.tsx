@@ -27,14 +27,16 @@ function getIsDark() {
 // any hydration mismatch: the server snapshot is a fixed `false`, and
 // React reconciles the real client value after hydration itself.
 //
-// The file-upload control lives here, not in either detail page
-// (requirements.md §8.9/design.md §6.7) - a single shared change so
-// both /python/[problemId] and /python/ocr/[challengeId] get it for
-// free, rather than two copies. It doesn't add a second way to submit
-// code: reading the file's text and calling the same onChange the
-// editor itself calls means an uploaded file becomes the editor's
-// value exactly as if typed, with no separate upload endpoint or
-// server-side storage.
+// The file-upload control lives here, not in the detail page
+// (requirements.md §8.9/design.md §6.7) - originally a single shared
+// change so both the (now-retired, design.md §6.9) parent-authored
+// detail page and /python/ocr/[challengeId] got it for free, rather than
+// two copies; kept in this shared component rather than inlined now that
+// only one caller remains, since a second problem source could return
+// later (§6.9). It doesn't add a second way to submit code: reading the
+// file's text and calling the same onChange the editor itself calls
+// means an uploaded file becomes the editor's value exactly as if typed,
+// with no separate upload endpoint or server-side storage.
 export function PythonEditor({ value, onChange }: Props) {
   const dark = useSyncExternalStore(subscribeToColorScheme, getIsDark, () => false);
 

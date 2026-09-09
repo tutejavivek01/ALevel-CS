@@ -45,6 +45,11 @@ seeding) exist specifically so later tasks don't have to reinvent them.
 - [x] 35. OCR challenge execution, grading & review
 - [x] 36. Code submission via file upload
 - [x] 37. End-to-end polish & sign-off (OCR challenge set)
+- [x] 38. Retire the ad hoc ("custom") problem source
+- [ ] 39. Saved code versions: schema + RLS
+- [ ] 40. Saved code versions: UI wiring
+- [ ] 41. Due dates on OCR challenges
+- [ ] 42. End-to-end polish & sign-off (Python Practice overhaul)
 
 ---
 
@@ -667,6 +672,141 @@ Per `design.md` §8, mirrors task 29 for this feature specifically.
   non-testable challenge's manual-review-only path, a testable
   challenge's full grading + review cycle, the best-practice checker on
   both problem sources, and file upload.
+
+**Done when:** all of the above hold, and `steering/tasks.md` reflects
+every task in this list checked off.
+
+## 38. Retire the ad hoc ("custom") problem source
+
+Per `design.md` §6.9, requirements.md §8.11.
+
+- Delete the routes: `app/(app)/python/new/page.tsx`,
+  `app/(app)/python/[problemId]/page.tsx`.
+- Delete the components: `PythonProblemForm.tsx`, `PythonProblemList.tsx`,
+  `PythonProblemDetail.tsx`.
+- Delete the custom-only data hooks: `use-python-problems.ts`,
+  `use-python-problem.ts`, `use-python-submissions.ts`,
+  `use-python-reviews.ts`, `use-python-review-statuses.ts`.
+- Delete the custom-only Playwright specs: `python-problems.spec.ts`,
+  `python-problem-detail.spec.ts`, `python-submissions.spec.ts`,
+  `python-review.spec.ts`, `python-deadlines.spec.ts`, and
+  `__tests__/python-deadlines.test.ts`.
+- Edit `app/(app)/python/page.tsx` to render only `<OcrChallengeList/>`.
+- Edit `python-best-practice.spec.ts` and `python-file-upload.spec.ts` to
+  drop their `python_problems` scenario, keeping their existing OCR
+  scenario.
+- Leave every `python_problems`/`python_test_cases`/`python_submissions`/
+  `python_submission_results`/`python_problem_reviews` migration, table,
+  RLS policy, and existing row completely untouched — no migration in
+  this task.
+- Confirm nothing shared got deleted by mistake: `PythonEditor.tsx`,
+  `lib/python/grade-submission.ts`, `lib/python/pyodide-protocol.ts`,
+  `lib/python/use-pyodide-worker.ts`, `lib/exercises/python-output.ts`,
+  `lib/exercises/python-review-status.ts` must all still exist and the
+  OCR flow must keep working exactly as before.
+
+**Done when:** `/python/new` and `/python/[problemId]` 404 (no route
+exists); `/python` shows only the OCR list; `npm run build`/`lint`/`test`
+and the full Playwright suite pass with the deleted specs gone, not
+skipped; the existing `python_*` tables still contain their pre-existing
+rows, confirmed with a direct query.
+
+## 39. Saved code versions: schema + RLS
+
+Per `design.md` §2.2/§6.10, requirements.md §8.12.
+
+- Migrations for `ocr_challenge_code_versions` (student-only insert) and
+  `ocr_challenge_version_comments` (supporter-only insert, FK to
+  `ocr_challenge_code_versions.id`) — open select on both, matching the
+  existing OCR tables' pattern (task 30).
+- Extend `public/pyodide-worker.js`'s `CHECKER_SOURCE`: the
+  `except SyntaxError` branch, which today silently returns
+  `{findings: []}`, also returns the caught exception's text as
+  `syntaxError` in the same JSON response.
+- Extend `lib/python/pyodide-protocol.ts`'s check response type and
+  `lib/python/use-pyodide-worker.ts`'s `check()` return value to include
+  `syntaxError: string | null` alongside `findings`.
+- Confirm the role split directly against the database with each seeded
+  account's session, same rigor as task 30: student can insert a code
+  version, supporter cannot; supporter can insert a version comment,
+  student cannot.
+
+**Done when:** those role-split checks pass against real sessions; a
+manual `check` call against genuinely malformed code returns a non-null
+`syntaxError`, and against valid code returns `null` — confirmed directly
+against the worker, not yet wired into any UI.
+
+## 40. Saved code versions: UI wiring
+
+Per `design.md` §6.10.
+
+- `lib/db/use-ocr-challenge-code-versions.ts`:
+  `useOcrChallengeCodeVersions(challengeId)` and
+  `useSaveOcrChallengeCodeVersion(challengeId)` (inserts one version row
+  using task 39's extended `check()` call — no `{type:'run'}` message).
+- `lib/db/use-ocr-challenge-version-comments.ts`: fetch + add-comment hook
+  for a given `version_id`.
+- Add a "Save" button to `OcrChallengeDetail.tsx`, rendered regardless of
+  whether the challenge has test cases (unlike "Run").
+- Version-history list on the detail page: newest first, each entry
+  showing its code, `syntax_error` if present, `best_practice_findings`
+  if any, and its comments; a small comment form under each version,
+  visible to the supporter role only (mirrors `ReviewForm`).
+- Update `use-ocr-challenge-review-statuses.ts` (and the equivalent
+  per-challenge computation in `OcrChallengeDetail.tsx`) so
+  `hasSubmissions` is `true` when either a submission or a saved version
+  exists — this is what lets a manual-review-only challenge reach
+  `attempted`.
+- Update "Submit for review"'s disabled condition the same way.
+
+**Done when:** Save works on both a testable and a non-testable
+challenge; both accounts can see a saved version's actual code; a
+supporter's comment on one version appears live without changing the
+challenge-level review thread or the `reviewed` status; a manual-review
+-only challenge shows `attempted` after a Save with zero Runs ever having
+happened.
+
+## 41. Due dates on OCR challenges
+
+Per `design.md` §2.2/§6.11, requirements.md §8.13.
+
+- Migration adding `due_date date` to `ocr_challenge_review_state`, plus
+  `guard_ocr_challenge_review_state_supporter_write` (BEFORE INSERT OR
+  UPDATE trigger) and updated insert/update RLS policies allowing either
+  role, per `design.md` §2.2.
+- A due-date control on `OcrChallengeDetail.tsx`, writable by either
+  role.
+- Overdue visual treatment (reusing the existing NEA/`.overdue`-style
+  CSS) on both the list page and the detail page, shown when `due_date`
+  has passed and status isn't `reviewed`.
+- Rename/repurpose `lib/python-deadlines.ts` to read
+  `ocr_challenge_review_state`/`OCR_CHALLENGES` instead of
+  `python_problems`; update `DeadlineBanner.tsx` to match.
+- Confirm the trigger directly: a supporter session can set `due_date`
+  but a write that also touches `submitted_for_review_at` is rejected; a
+  student session can still set both columns freely.
+
+**Done when:** either account can set/see a due date live on the other's
+session; an overdue, un-reviewed challenge is visually flagged on both
+the list and detail pages and a reviewed one isn't; the dashboard banner
+shows OCR due dates; the trigger check above passes against real
+sessions.
+
+## 42. End-to-end polish & sign-off (Python Practice overhaul)
+
+Per `design.md` §8, mirrors tasks 29/37 for this round specifically.
+
+- Walk requirements.md §8.11–§8.13 top to bottom against the finished
+  app, the same acceptance-check standard as tasks 29/37.
+- Full Playwright coverage for the new/changed flows: the retired routes
+  404ing, Save on both a testable and non-testable challenge, version
+  visibility on both accounts, a per-version supporter comment, jointly
+  -editable due dates, and the overdue flag clearing once reviewed.
+- Confirm no leftover reference to the retired custom-problem UI remains
+  (nav links, imports, dead code) via a full-repo search, not just the
+  routes already covered above.
+- Run the full verification suite: lint, Vitest, a clean production
+  build, and the full Playwright suite.
 
 **Done when:** all of the above hold, and `steering/tasks.md` reflects
 every task in this list checked off.

@@ -211,6 +211,11 @@ Parent-authored, consisting of:
 (A second, fixed source of problems — an exam board's published
 challenge set — is also available; see §8.8.)
 
+(As of §8.11, this ad hoc source itself is retired from the visible
+product surface — the OCR set is now the sole source presented to
+users. §8.1–§8.7 remain here as the historical description of the
+retained-but-hidden data model.)
+
 ### 8.2 Execution model
 Code runs entirely **client-side via Pyodide** (a WebAssembly Python
 interpreter) inside the student's browser. No server ever executes
@@ -283,7 +288,9 @@ coexist in the same Python Practice list, visually distinguished — the
 same "two distinct lists, kept visually separate" treatment already used
 for curated vs. personal resource links (§3). Nothing about the existing
 supporter-authored flow changes; this adds a second, fixed source
-alongside it.
+alongside it. **Superseded by §8.11**: the supporter-authored source
+is subsequently retired from the visible product surface, so Python
+Practice now shows a single list (the OCR set only) rather than two.
 
 - All 80 challenges are imported with their full description text.
   Where a challenge lists optional "Extensions," they're shown as
@@ -390,6 +397,96 @@ they're less valid, but to keep the first version's rule set small and its
 false-positive rate low. Either can be added later as an incremental
 change to the same rule-set module, not a redesign (§10).
 
+### 8.11 Retiring the ad hoc ("custom") problem source
+
+Added 2026-09-09. Superseding §8.1–§8.7's "parent-authored" framing:
+that ad hoc problem-creation flow is retired from the visible Python
+Practice surface. Only the fixed OCR challenge set (§8.8) is shown to
+either account going forward — no "create a problem" entry point, and
+the ad hoc list no longer appears alongside the OCR list. §8.8's opening
+paragraph's "two distinct lists, visually separate" framing is superseded
+by this note: Python Practice now presents a single list.
+
+This is a removal from the *product surface*, not a data-destructive
+change: existing custom problems, their test cases, submissions, and
+reviews already in the database are retained rather than deleted,
+preserving `principles.md` §1's no-silent-data-loss guarantee and leaving
+the door open to reintroduce the feature later without a migration.
+Exactly how "hidden but retained" is implemented (route removed vs.
+simply unlinked from navigation, whether the creation form stays in the
+codebase unused) is a design-time decision (§10), not a requirements-level
+one — mirroring how §8.8's own visual-treatment question was deferred to
+design.
+
+### 8.12 Saved code versions (OCR challenges)
+
+Added 2026-09-09. In addition to the existing Run (test-case grading,
+§8.2–§8.4) and Submit-for-review (§8.6) actions, a student can explicitly
+**Save** their current code on any OCR challenge at any time —
+including challenges with no test cases (§8.8's manual-review-only
+subset, which today has no way to persist code at all) and code that
+doesn't run cleanly yet. Each Save creates a new, permanent **version**: a
+snapshot of the code at that moment, never overwritten — the same
+append-only principle already used for attempt history (§8.5) and status
+history (§2). Save is deliberately independent of Run: saving never
+requires the code to compile or pass, so a student mid-attempt can
+checkpoint partial work. Whether a Run should *also* implicitly create a
+Save version (so a graded attempt is never lost even if the student
+never clicks Save) is a design-time question, not decided here (§10).
+
+- Every version records: the code itself, who saved it, when, and — if
+  the code doesn't run cleanly when saved — the resulting Python
+  error/traceback, shown the same honest, uncleaned way runtime errors
+  are already displayed elsewhere (§8.3). A version whose code runs
+  cleanly simply has no error recorded.
+- **Both accounts can see the full version history, including the actual
+  code of every version** — not just result metadata the way today's
+  attempt history does. This closes a real gap: today's attempt history
+  shows only a pass/fail badge and a timestamp, never the code text
+  itself, so a supporter reviewing a student's work can't actually read
+  what they wrote.
+- The supporter can leave a **comment on any individual saved version**,
+  not just on the challenge as a whole — an evolution of the existing
+  supporter-review mechanic (§8.6/§8.8): instead of one feedback thread
+  tied to the whole challenge, feedback attaches to the specific attempt
+  it responds to (e.g. "this version's loop handles the edge case at
+  n=0 better than your last one"). Whether the challenge-level `reviewed`
+  status (§8.6's four-state model) now means "every version has a
+  comment" or keeps its current "at least one comment exists anywhere"
+  meaning is a design-time decision (§10).
+- Scoped to the OCR flow only, since it's now the sole visible problem
+  source (§8.11).
+
+### 8.13 Due dates on OCR challenges
+
+Added 2026-09-09. Either account — student or supporter — can set or
+change a due date on any OCR challenge. This is a genuine departure from
+every other piece of OCR mutable state (§8.8/§8.12), which is strictly
+student-writes/supporter-reviews: a due date is **jointly editable by
+both roles**, the same joint-ownership model already used for NEA section
+fields (§4) rather than a one-way "parent assigns" relationship. This
+reflects that with a fixed, exam-board-published challenge set, neither
+account "owns" a given challenge the way a supporter owned a
+custom-authored problem's due date (§8.1). There is exactly one shared
+due date per challenge, not a separate one per account — consistent with
+§1's "one shared progress record" principle and how the rest of OCR
+challenge state (§8.8) already works.
+
+- A challenge with no due date set shows no deadline indicator.
+- A challenge whose due date is upcoming is shown neutrally, reusing the
+  same upcoming/overdue surfacing pattern already established for NEA
+  sections (§4) and the (now-retired, §8.11) parent-authored Python
+  problems (§8.1) — not a new pattern.
+- A challenge whose due date has passed **and is not yet `reviewed`**
+  (§8.6/§8.12's status model) is flagged with a visually distinct color —
+  mirroring NEA's "status is not complete" condition (§4) so a challenge
+  the supporter already reviewed doesn't keep nagging as overdue.
+- Whether this also feeds the existing dashboard overdue banner
+  (currently populated from NEA sections and parent-authored Python
+  problems) alongside the on-challenge flag is a design-time decision
+  (§10) — the requirements-level need is just that overdue is visually
+  distinguishable somewhere the student/supporter will see it.
+
 ## 9. Explicitly out of scope for this pass
 
 Carried over from `product.md`'s non-goals, restated as requirements-level
@@ -412,6 +509,10 @@ exclusions so they aren't accidentally reintroduced during design:
   submission's output rather than an exact string match) — deferred per
   §8.8; the handful of otherwise-CLI-shaped OCR challenges with
   non-unique correct output are treated as manual-review-only instead.
+- Per-account (student vs. supporter) separate due dates, or separate
+  version/comment histories, on an OCR challenge — there is exactly one
+  shared due date and one shared version history per challenge, not a
+  per-account copy (§1, §8.12, §8.13).
 
 ## 10. Open items for design/build phase (not blocking, flagged for later)
 
@@ -436,3 +537,15 @@ exclusions so they aren't accidentally reintroduced during design:
   grouping, etc.) — a design-time decision, not a requirements-level one.
 - Whether OCR's listed "Extensions" ever become their own gradable
   sub-challenges rather than stretch-goal notes.
+- Exactly how "hidden but retained" is implemented for the custom
+  problem source — route removal vs. unlinking, whether the creation
+  form/tests stay in the codebase unused (§8.11).
+- Whether a Run should also implicitly create a Save version (§8.12).
+- Whether `reviewed` status now requires a comment on every version, or
+  keeps its current "any comment anywhere" meaning (§8.12).
+- Where saved-version code is displayed in the UI (inline expandable
+  list vs. a separate view) and whether a diff between versions is
+  worth showing (§8.12).
+- Whether the OCR due-date flag also feeds the existing dashboard
+  overdue banner, and whether it reuses the 14-day "upcoming" window
+  already used elsewhere (§4/§8.1) or a different one (§8.13).

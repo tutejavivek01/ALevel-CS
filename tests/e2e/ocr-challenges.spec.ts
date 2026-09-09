@@ -13,12 +13,9 @@ test.beforeEach(async ({ page }) => {
   await page.waitForURL('/');
 });
 
-test('the /python list shows both custom problems and all 80 OCR challenges as two distinct groups', async ({
-  page,
-}) => {
+test('the /python list shows all 80 OCR challenges as a single list', async ({ page }) => {
   await page.goto('/python');
 
-  await expect(page.getByRole('heading', { name: 'Custom problems' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'OCR Coding Challenges' })).toBeVisible();
 
   // All 80 are reachable from the list - spot-check the first, a
@@ -40,11 +37,10 @@ test('a challenge renders its correct content and a working editor', async ({ pa
   await expect(page.getByRole('button', { name: 'Run' })).toBeEnabled();
 });
 
-test('a challenge with no test cases yet shows the manual-review note', async ({ page }) => {
-  // No challenge has test cases yet (task 34 hasn't run) - every one
-  // currently shows this note, which is exactly the intended behavior
-  // for the permanently-non-testable subset too, once task 34 gives the
-  // testable ~45-50 real test cases and this stops being universal.
+test('a challenge with no test cases shows the manual-review note', async ({ page }) => {
+  // ocr-fireworks is one of the 58 permanently non-testable challenges
+  // (requirements.md §8.8) - it never gets test cases, unlike the 22
+  // that did once task 34 hand-derived them.
   const challenge = OCR_CHALLENGES.find((c) => c.id === 'ocr-fireworks')!;
   expect(challenge.testCases).toBeUndefined();
   await page.goto(`/python/ocr/${challenge.id}`);

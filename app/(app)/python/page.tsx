@@ -1,14 +1,12 @@
-import { PythonProblemList } from '@/components/PythonProblemList';
 import { OcrChallengeList } from '@/components/OcrChallengeList';
 
-// Two visually distinct groups on the same page (design.md §6.8) - the
-// same "two distinct lists, kept visually separate" treatment already
-// used for curated vs. personal resource links (§6.2) - not a second
-// nav item or route.
+// The supporter-authored ("custom") problem list that used to render
+// here alongside the OCR set is retired (design.md §6.9,
+// requirements.md §8.11) - the underlying python_* schema and data are
+// untouched, only this page's UI no longer shows them.
 export default function PythonPracticeListPage() {
   return (
     <div className="stack">
-      <PythonProblemList />
       <OcrChallengeList />
     </div>
   );
