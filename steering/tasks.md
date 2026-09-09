@@ -38,7 +38,7 @@ seeding) exist specifically so later tasks don't have to reinvent them.
 - [x] 28. Data export
 - [x] 29. End-to-end polish & sign-off
 - [x] 30. OCR challenge tables: schema + RLS
-- [ ] 31. Best-practice / code-quality checker
+- [x] 31. Best-practice / code-quality checker
 - [ ] 32. OCR challenge content: descriptions
 - [ ] 33. OCR challenge list + static detail page
 - [ ] 34. OCR challenge test cases

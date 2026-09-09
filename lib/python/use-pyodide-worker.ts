@@ -3,6 +3,8 @@
 import { useEffect, useRef } from 'react';
 import { PYTHON_EXEC_TIMEOUT_MS } from '@/lib/config';
 import type {
+  PyodideCheckRequest,
+  PyodideCheckResponse,
   PyodideInitMessage,
   PyodideRunRequest,
   PyodideRunResponse,
@@ -60,7 +62,8 @@ export function usePyodideWorker() {
         if (interruptArray) interruptArray[0] = 2;
       }, PYTHON_EXEC_TIMEOUT_MS);
 
-      function handleMessage(event: MessageEvent<PyodideRunResponse>) {
+      function handleMessage(event: MessageEvent<PyodideRunResponse | PyodideCheckResponse>) {
+        if (event.data.type !== 'result') return;
         clearTimeout(timeoutId);
         worker!.removeEventListener('message', handleMessage);
         worker!.removeEventListener('error', handleError);
@@ -80,5 +83,35 @@ export function usePyodideWorker() {
     });
   }
 
-  return { run };
+  // Best-practice/code-quality check (design.md §6.7/§6.8) - no timeout
+  // needed here (unlike run()): the checker is pure, fast AST analysis,
+  // never a student's own arbitrarily-long-running code.
+  function check(code: string): Promise<string[]> {
+    return new Promise((resolve, reject) => {
+      const worker = workerRef.current;
+      if (!worker) {
+        reject(new Error('Pyodide worker is not ready yet'));
+        return;
+      }
+
+      function handleMessage(event: MessageEvent<PyodideRunResponse | PyodideCheckResponse>) {
+        if (event.data.type !== 'check-result') return;
+        worker!.removeEventListener('message', handleMessage);
+        worker!.removeEventListener('error', handleError);
+        resolve(event.data.findings);
+      }
+      function handleError(event: ErrorEvent) {
+        worker!.removeEventListener('message', handleMessage);
+        worker!.removeEventListener('error', handleError);
+        reject(event.error ?? new Error(event.message));
+      }
+
+      worker.addEventListener('message', handleMessage);
+      worker.addEventListener('error', handleError);
+      const request: PyodideCheckRequest = { type: 'check', code };
+      worker.postMessage(request);
+    });
+  }
+
+  return { run, check };
 }

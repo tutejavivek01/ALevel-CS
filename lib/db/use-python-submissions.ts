@@ -22,6 +22,7 @@ export type PythonSubmission = {
   code: string;
   overall_result: 'pass' | 'fail' | 'timeout' | 'error';
   error_message: string | null;
+  best_practice_findings: string[];
   created_at: string;
   python_submission_results: PythonSubmissionResult[];
 };
@@ -64,7 +65,7 @@ export function usePythonSubmissions(problemId: number) {
 // moment before.
 export function useSubmitPythonCode(problemId: number, testCases: PythonTestCase[]) {
   const queryClient = useQueryClient();
-  const { run } = usePyodideWorker();
+  const { run, check } = usePyodideWorker();
 
   return useMutation({
     mutationFn: async (code: string) => {
@@ -100,6 +101,12 @@ export function useSubmitPythonCode(problemId: number, testCases: PythonTestCase
         if (!passed && overallResult === 'pass') overallResult = 'fail';
       }
 
+      // One check per submission, not per test case (design.md
+      // §6.7/§6.8) - it inspects the submitted source itself, so
+      // repeating it per test case would just recompute the same
+      // answer. Advisory only: never affects overallResult above.
+      const bestPracticeFindings = await check(code);
+
       const { data: submission, error } = await supabase
         .from('python_submissions')
         .insert({
@@ -108,6 +115,7 @@ export function useSubmitPythonCode(problemId: number, testCases: PythonTestCase
           code,
           overall_result: overallResult,
           error_message: errorMessage,
+          best_practice_findings: bestPracticeFindings,
         })
         .select()
         .single();
@@ -125,7 +133,7 @@ export function useSubmitPythonCode(problemId: number, testCases: PythonTestCase
         if (resultsError) throw resultsError;
       }
 
-      return { overallResult, perTestResults, errorMessage };
+      return { overallResult, perTestResults, errorMessage, bestPracticeFindings };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: pythonSubmissionsQueryKey(problemId) });

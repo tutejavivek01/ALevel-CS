@@ -51,30 +51,97 @@ def __run_submission(code, stdin_text):
         })
 `;
 
+// Best-practice / code-quality check (design.md §6.7/§6.8, requirements.md
+// §8.10). Pure ast-based static analysis, not a real linter - this
+// Pyodide build has no pyflakes/pylint/flake8/pycodestyle available
+// (confirmed against pyodide-lock.json), and fetching one from PyPI at
+// grading time would reintroduce the exact external runtime dependency
+// self-hosting Pyodide's own assets was meant to avoid. Advisory only -
+// it never runs the code and never affects pass/fail.
+const CHECKER_SOURCE = `
+def __check_best_practice(code):
+    import ast, re, json
+
+    try:
+        tree = ast.parse(code)
+    except SyntaxError:
+        # A syntax error is already reported by __run_submission's own
+        # traceback - nothing useful to add here.
+        return json.dumps({'findings': []})
+
+    findings = []
+
+    has_function_or_class = any(
+        isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+        for node in ast.walk(tree)
+    )
+    if not has_function_or_class:
+        findings.append(
+            'No functions or classes defined - consider breaking the '
+            'program into smaller, reusable pieces.'
+        )
+
+    snake_case_re = re.compile(r'^[a-z_][a-z0-9_]*$')
+    # Traditional loop-counter names only - a bare 'x'/'y' holding a real
+    # value (not a coordinate/loop index) is exactly the non-descriptive
+    # naming this rule is meant to catch, so it isn't exempted here.
+    allowed_short_names = {'i', 'j', 'k', 'n'}
+    already_flagged = set()
+
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            name = node.name
+            if name not in already_flagged and not snake_case_re.match(name):
+                already_flagged.add(name)
+                findings.append(f"Function '{name}' should use snake_case naming.")
+        elif isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store):
+            name = node.id
+            if name in already_flagged:
+                continue
+            if len(name) == 1 and name.lower() not in allowed_short_names:
+                already_flagged.add(name)
+                findings.append(f"Variable '{name}' has a non-descriptive single-letter name.")
+            elif len(name) > 1 and not snake_case_re.match(name) and not name.isupper():
+                already_flagged.add(name)
+                findings.append(f"Variable '{name}' should use snake_case naming.")
+
+    for line_number, line in enumerate(code.splitlines(), start=1):
+        if len(line) > 100:
+            findings.append(f'Line {line_number} is over 100 characters long.')
+
+    return json.dumps({'findings': findings})
+`;
+
 // Loaded once per worker instance and kept warm across runs (design.md
 // §6.7) - the multi-MB download/init cost is paid once per tab, not
-// once per submission. The __run_submission PyProxy is grabbed once
-// here too, rather than re-fetched via pyodide.globals.get() on every
-// message, so repeated runs don't leak a fresh proxy each time.
-let runnerPromise = null;
+// once per submission. The __run_submission/__check_best_practice
+// PyProxies are grabbed once here too, rather than re-fetched via
+// pyodide.globals.get() on every message, so repeated calls don't leak
+// a fresh proxy each time.
+let pyodidePromise = null;
 let pyodideInstance = null;
+let runSubmission = null;
+let checkBestPractice = null;
 
 // A Uint8Array view over the SharedArrayBuffer the main thread sends in
 // the 'init' message. Written to only by the main thread (SIGINT on
 // timeout); read/cleared here.
 let interruptArray = null;
 
-function getRunner() {
-  if (!runnerPromise) {
-    runnerPromise = import('/pyodide/pyodide.mjs').then(async ({ loadPyodide }) => {
+function getPyodide() {
+  if (!pyodidePromise) {
+    pyodidePromise = import('/pyodide/pyodide.mjs').then(async ({ loadPyodide }) => {
       const pyodide = await loadPyodide({ indexURL: '/pyodide/' });
       pyodideInstance = pyodide;
       if (interruptArray) pyodide.setInterruptBuffer(interruptArray);
       pyodide.runPython(RUNNER_SOURCE);
-      return pyodide.globals.get('__run_submission');
+      pyodide.runPython(CHECKER_SOURCE);
+      runSubmission = pyodide.globals.get('__run_submission');
+      checkBestPractice = pyodide.globals.get('__check_best_practice');
+      return pyodide;
     });
   }
-  return runnerPromise;
+  return pyodidePromise;
 }
 
 self.onmessage = async (event) => {
@@ -86,8 +153,16 @@ self.onmessage = async (event) => {
     return;
   }
 
+  if (data.type === 'check') {
+    await getPyodide();
+    const resultJson = checkBestPractice(data.code);
+    const { findings } = JSON.parse(resultJson);
+    self.postMessage({ type: 'check-result', findings });
+    return;
+  }
+
   const { code, input } = data;
-  const runSubmission = await getRunner();
+  await getPyodide();
   // Clear any interrupt left over from a prior run's timeout - the byte
   // in shared memory doesn't reset itself once Python catches the
   // KeyboardInterrupt it caused, and a stale 2 would immediately

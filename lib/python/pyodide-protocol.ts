@@ -16,9 +16,25 @@ export type PyodideRunRequest = {
   input: string;
 };
 
-export type PyodideWorkerRequest = PyodideInitMessage | PyodideRunRequest;
+// Best-practice/code-quality check (design.md §6.7/§6.8, requirements.md
+// §8.10) - a single round trip per submission, not per test case, since
+// it inspects the submitted source itself rather than runtime behavior.
+export type PyodideCheckRequest = {
+  type: 'check';
+  code: string;
+};
+
+export type PyodideWorkerRequest =
+  | PyodideInitMessage
+  | PyodideRunRequest
+  | PyodideCheckRequest;
 
 export type PyodideRunResponse =
   | { type: 'result'; outcome: 'ok'; stdout: string }
   | { type: 'result'; outcome: 'error'; stdout: string; traceback: string }
   | { type: 'result'; outcome: 'timeout'; stdout: string };
+
+export type PyodideCheckResponse = {
+  type: 'check-result';
+  findings: string[];
+};

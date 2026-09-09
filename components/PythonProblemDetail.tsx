@@ -163,6 +163,17 @@ export function PythonProblemDetail({ problemId, initialProblem, initialTestCase
         </div>
       )}
 
+      {result && result.bestPracticeFindings.length > 0 && (
+        <div className="best-practice-panel">
+          <div className="field-label">Best-practice suggestions</div>
+          <ul className="best-practice-list">
+            {result.bestPracticeFindings.map((finding, index) => (
+              <li key={index}>{finding}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <h3 className="section-title" style={{ marginTop: 20 }}>
         Attempt history
       </h3>
@@ -180,6 +191,12 @@ export function PythonProblemDetail({ problemId, initialProblem, initialTestCase
               {submission.python_submission_results.filter((r) => r.passed).length} /{' '}
               {submission.python_submission_results.length} test cases passed
             </span>
+            {submission.best_practice_findings.length > 0 && (
+              <span style={{ fontSize: 12, color: 'var(--muted)' }}>
+                {submission.best_practice_findings.length} best-practice suggestion
+                {submission.best_practice_findings.length === 1 ? '' : 's'}
+              </span>
+            )}
           </div>
         ))}
       </div>

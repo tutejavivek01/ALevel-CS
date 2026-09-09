@@ -970,6 +970,25 @@ svg.fsm text.edge-label {
   color: var(--ink-dim);
 }
 
+.best-practice-panel {
+  margin-top: 12px;
+  border: 1px solid var(--learn);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.best-practice-list {
+  list-style: disc;
+  margin: 6px 0 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.best-practice-list li {
+  font-size: 12.5px;
+  color: var(--ink-dim);
+}
+
 .result-badge {
   font-size: 11px;
   padding: 4px 10px;
