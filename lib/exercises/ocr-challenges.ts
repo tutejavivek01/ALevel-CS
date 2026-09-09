@@ -47,7 +47,13 @@ export const OCR_CHALLENGES: OcrChallenge[] = [
     id: 'ocr-factorial-finder',
     number: 1,
     title: 'Factorial Finder',
-    description: `The Factorial of a positive integer, n, is defined as the product of the sequence n, n-1, n-2, ...1 and the factorial of zero, 0, is defined as being 1. Solve this using both loops and recursion.`,
+    description: `The Factorial of a positive integer, n, is defined as the product of the sequence n, n-1, n-2, ...1 and the factorial of zero, 0, is defined as being 1. Solve this using both loops and recursion.
+
+For this app: read a single non-negative integer from stdin and print its factorial as an integer, with no other output.`,
+    testCases: [
+      { input: '5\n', expectedOutput: '120\n' },
+      { input: '0\n', expectedOutput: '1\n' },
+    ],
   },
   {
     id: 'ocr-speed-tracker',
@@ -103,7 +109,13 @@ The player starts with £1 credit, with each go costing 20p. If the Fruit Machin
     id: 'ocr-credit-card-validator',
     number: 7,
     title: 'Credit Card Validator',
-    description: `Takes in a credit card number from a common credit card vendor (Visa, MasterCard, American Express, Discoverer) and validates it to make sure that it is a valid number (look into how credit cards use a checksum).`,
+    description: `Takes in a credit card number from a common credit card vendor (Visa, MasterCard, American Express, Discoverer) and validates it to make sure that it is a valid number (look into how credit cards use a checksum).
+
+For this app: read a string of digits with no spaces or dashes and print exactly True or False according to the Luhn checksum algorithm.`,
+    testCases: [
+      { input: '4532015112830366\n', expectedOutput: 'True\n' },
+      { input: '1234567812345678\n', expectedOutput: 'False\n' },
+    ],
   },
   {
     id: 'ocr-arithmetic-test',
@@ -123,7 +135,13 @@ The system should ask the student's name and then ask ten questions. The program
     title: 'Happy Numbers',
     description: `A happy number is defined by the following process:
 
-Starting with any positive integer, replace the number by the sum of the squares of its digits, and repeat the process until the number equals 1 (where it will stay), or it loops endlessly in a cycle which does not include 1. Those numbers for which this process ends in 1 are happy numbers, while those that do not end in 1 are unhappy numbers. Display an example of your output here. Find the first eight happy numbers.`,
+Starting with any positive integer, replace the number by the sum of the squares of its digits, and repeat the process until the number equals 1 (where it will stay), or it loops endlessly in a cycle which does not include 1. Those numbers for which this process ends in 1 are happy numbers, while those that do not end in 1 are unhappy numbers. Display an example of your output here. Find the first eight happy numbers.
+
+For this app: read a single positive integer and print exactly True or False for whether that one number is happy.`,
+    testCases: [
+      { input: '7\n', expectedOutput: 'True\n' },
+      { input: '4\n', expectedOutput: 'False\n' },
+    ],
   },
   {
     id: 'ocr-number-names',
@@ -167,13 +185,28 @@ Starting with any positive integer, replace the number by the sum of the squares
     title: 'Pangrams',
     description: `"The quick brown fox jumps over the lazy dog"; note how all 26 English-language letters are used in the sentence.
 
-Your goal is to implement a program that takes a series of strings (one per line) and prints either True (the given string is a pangram), or False if it is not.`,
+Your goal is to implement a program that takes a series of strings (one per line) and prints either True (the given string is a pangram), or False if it is not.
+
+For this app: read a single line and print exactly True or False (letter-case is ignored; non-letter characters are ignored).`,
+    testCases: [
+      {
+        input: 'The quick brown fox jumps over the lazy dog\n',
+        expectedOutput: 'True\n',
+      },
+      { input: 'hello world\n', expectedOutput: 'False\n' },
+    ],
   },
   {
     id: 'ocr-kaprekar',
     number: 16,
     title: 'Kaprekar',
-    description: `Determine whether a number is a Kaprekar number or not. See http://mathworld.wolfram.com/KaprekarNumber.html for more information.`,
+    description: `Determine whether a number is a Kaprekar number or not. See http://mathworld.wolfram.com/KaprekarNumber.html for more information.
+
+For this app: read a single positive integer and print exactly True or False.`,
+    testCases: [
+      { input: '45\n', expectedOutput: 'True\n' },
+      { input: '10\n', expectedOutput: 'False\n' },
+    ],
   },
   {
     id: 'ocr-number-table',
@@ -197,7 +230,10 @@ For this example the user has entered "+ 4":
     title: 'Years in a Range',
     description: `Write a program to count the number years in a range that has a repeated digit.
 
-For example, 2012 has a repeated digit, but 2013 does not.`,
+For example, 2012 has a repeated digit, but 2013 does not.
+
+For this app: read two integers, the start and end of the range inclusive, each on its own line, and print the count of years within that range with at least one repeated digit.`,
+    testCases: [{ input: '2000\n2020\n', expectedOutput: '14\n' }],
   },
   {
     id: 'ocr-logic-gate',
@@ -212,13 +248,25 @@ Enter first input : 1
 Enter second input : 0
 Result = 1
 
-It should work for the logic gates OR, AND, XOR, NAND and NOR`,
+It should work for the logic gates OR, AND, XOR, NAND and NOR
+
+For this app: read the gate name, then the first input, then the second input, each on its own line with no prompts printed, and print exactly "Result = X" where X is 0 or 1.`,
+    testCases: [
+      { input: 'OR\n1\n0\n', expectedOutput: 'Result = 1\n' },
+      { input: 'NAND\n1\n1\n', expectedOutput: 'Result = 0\n' },
+    ],
   },
   {
     id: 'ocr-palindromes',
     number: 20,
     title: 'Palindromes',
-    description: `Write a program that checks if a string entered by the user is a palindrome. A palindrome is a word that reads the same forwards as backwards like "racecar"`,
+    description: `Write a program that checks if a string entered by the user is a palindrome. A palindrome is a word that reads the same forwards as backwards like "racecar"
+
+For this app: the input is a single line containing only lowercase letters, no spaces or punctuation. Print exactly True or False.`,
+    testCases: [
+      { input: 'racecar\n', expectedOutput: 'True\n' },
+      { input: 'hello\n', expectedOutput: 'False\n' },
+    ],
   },
   {
     id: 'ocr-data-entry',
@@ -312,7 +360,13 @@ It should work for the logic gates OR, AND, XOR, NAND and NOR`,
     id: 'ocr-year-addition',
     number: 30,
     title: 'Year Addition',
-    description: `Create a program that accepts a year in the format ####, e.g. 2015. The program then adds each digit of the year together and outputs the answer. E.g. 2015 becomes the output 8.`,
+    description: `Create a program that accepts a year in the format ####, e.g. 2015. The program then adds each digit of the year together and outputs the answer. E.g. 2015 becomes the output 8.
+
+For this app: read a single 4-digit year and print the sum of its digits as an integer.`,
+    testCases: [
+      { input: '2015\n', expectedOutput: '8\n' },
+      { input: '1999\n', expectedOutput: '28\n' },
+    ],
     extensions: [
       `Develop this so that the user can guess an integer value. If the MOD division is "0" they score a point, if it isn't they can guess again, up to 3 attempts in total`,
     ],
@@ -321,13 +375,22 @@ It should work for the logic gates OR, AND, XOR, NAND and NOR`,
     id: 'ocr-forwards-and-backwards',
     number: 31,
     title: 'Forwards and Backwards',
-    description: `Create a program that is able to detect if an input is the same as the reverse of the same input - i.e. a Palindrome`,
+    description: `Create a program that is able to detect if an input is the same as the reverse of the same input - i.e. a Palindrome
+
+For this app: the input is a single line containing only lowercase letters, no spaces or punctuation. Print exactly True or False.`,
+    testCases: [
+      { input: 'hannah\n', expectedOutput: 'True\n' },
+      { input: 'python\n', expectedOutput: 'False\n' },
+    ],
   },
   {
     id: 'ocr-code-it-up',
     number: 32,
     title: 'Code it up',
-    description: `Create a program that adds 25 to the value of each character of a string that a user enters. This new string should be saved and output.`,
+    description: `Create a program that adds 25 to the value of each character of a string that a user enters. This new string should be saved and output.
+
+For this app: read a single line containing only lowercase letters a-z and print the resulting string after adding 25 to each character's Unicode code point (no wraparound).`,
+    testCases: [{ input: 'abc\n', expectedOutput: 'z{|\n' }],
     extensions: [
       `Develop your program to include a conversion from a 'coded' string back to a normal string`,
       `Develop your program to allow the user to enter the number they want the string coded by (e.g. 12)`,
@@ -369,7 +432,14 @@ Create a program that allows the user to guess a number. A random number is gene
     id: 'ocr-triangulate',
     number: 36,
     title: 'Triangulate',
-    description: `Create a program that accepts 3 sides of a triangle. It then works out if these sides form a triangle, and if so, what type of triangle (e.g. Scalene, Isosceles, Right-Angle....)`,
+    description: `Create a program that accepts 3 sides of a triangle. It then works out if these sides form a triangle, and if so, what type of triangle (e.g. Scalene, Isosceles, Right-Angle....)
+
+For this app: read three positive integers (side lengths, each on its own line) and print exactly one of: Not a triangle / Equilateral / Isosceles / Scalene. (Right-angle detection is deliberately not part of this app's contract, to avoid overlapping-category ambiguity the original problem doesn't resolve either.)`,
+    testCases: [
+      { input: '3\n4\n5\n', expectedOutput: 'Scalene\n' },
+      { input: '5\n5\n5\n', expectedOutput: 'Equilateral\n' },
+      { input: '5\n5\n8\n', expectedOutput: 'Isosceles\n' },
+    ],
     extensions: [
       `Develop your program to allow 2 sides of a triangle and an angle, to work out the length of the missing side`,
     ],
@@ -382,7 +452,16 @@ Create a program that allows the user to guess a number. A random number is gene
 
 - Any multiple of 3 is replaced by the word 'Fizz'
 - Any multiple of 5 is replaced by the word 'Buzz'
-- Any multiple of both 3 and 5 is replaced by the word 'FizzBuzz'`,
+- Any multiple of both 3 and 5 is replaced by the word 'FizzBuzz'
+
+For this app: read a single integer n from stdin, then print the sequence from 1 to n inclusive, one number or word per line.`,
+    testCases: [
+      {
+        input: '15\n',
+        expectedOutput:
+          '1\n2\nFizz\n4\nBuzz\nFizz\n7\n8\nFizz\nBuzz\n11\nFizz\n13\n14\nFizzBuzz\n',
+      },
+    ],
     extensions: [
       `Replace any prime number with the word 'OOPS!'`,
       `Allow the user to enter the base numbers that they want to replace words with. E.g. 2 and 3, which would mean: any multiple of 2 is replaced by the word 'Fizz'; any multiple of 3 is replaced by the word 'Buzz'; any multiple of both 2 and 3 is replaced by the word 'FizzBuzz'`,
@@ -410,7 +489,13 @@ Create a program that allows the user to guess a number. A random number is gene
     id: 'ocr-base-of-numbers',
     number: 40,
     title: 'Base of Numbers',
-    description: `Create a program that converts a denary number into its hexadecimal equivalent.`,
+    description: `Create a program that converts a denary number into its hexadecimal equivalent.
+
+For this app: read a single non-negative integer and print its hexadecimal equivalent using uppercase letters A-F, with no "0x" prefix.`,
+    testCases: [
+      { input: '255\n', expectedOutput: 'FF\n' },
+      { input: '4096\n', expectedOutput: '1000\n' },
+    ],
     extensions: [
       `Allow the user to specify the base that they want to convert the number into, using an integer, e.g. 16 for Hexadecimal`,
     ],
@@ -419,7 +504,13 @@ Create a program that allows the user to guess a number. A random number is gene
     id: 'ocr-prime-factorisation',
     number: 41,
     title: 'Prime Factorisation',
-    description: `Have the user enter a number and find all Prime Factors (if there are any) and display them.`,
+    description: `Have the user enter a number and find all Prime Factors (if there are any) and display them.
+
+For this app: read a single integer greater than 1 and print its prime factors in ascending order, space-separated, with repeated factors listed once per occurrence (e.g. 60 is "2 2 3 5").`,
+    testCases: [
+      { input: '60\n', expectedOutput: '2 2 3 5\n' },
+      { input: '97\n', expectedOutput: '97\n' },
+    ],
     extensions: [
       `Have the program find prime numbers until the user chooses to stop asking for the next one.`,
     ],
@@ -454,7 +545,13 @@ Create a program that allows the user to guess a number. A random number is gene
     id: 'ocr-find-the-factorial',
     number: 45,
     title: 'Find the factorial',
-    description: `The Factorial of a positive integer, n, is defined as the product of the sequence n, n-1, n-2, ...1 and the factorial of zero, 0, is defined as being 1. Solve this using both loops and recursion.`,
+    description: `The Factorial of a positive integer, n, is defined as the product of the sequence n, n-1, n-2, ...1 and the factorial of zero, 0, is defined as being 1. Solve this using both loops and recursion.
+
+For this app: read a single non-negative integer from stdin and print its factorial as an integer, with no other output.`,
+    testCases: [
+      { input: '6\n', expectedOutput: '720\n' },
+      { input: '1\n', expectedOutput: '1\n' },
+    ],
   },
   {
     id: 'ocr-complex-numbers',
@@ -466,7 +563,13 @@ Create a program that allows the user to guess a number. A random number is gene
     id: 'ocr-happy-numbers-47',
     number: 47,
     title: 'Happy Numbers =)',
-    description: `A happy number is defined by the following process. Starting with any positive integer, replace the number by the sum of the squares of its digits, and repeat the process until the number equals 1 (where it will stay), or it loops endlessly in a cycle which does not include 1. Those numbers for which this process ends in 1 are happy numbers, while those that do not end in 1 are unhappy numbers. Have the programme find the first 8 happy numbers.`,
+    description: `A happy number is defined by the following process. Starting with any positive integer, replace the number by the sum of the squares of its digits, and repeat the process until the number equals 1 (where it will stay), or it loops endlessly in a cycle which does not include 1. Those numbers for which this process ends in 1 are happy numbers, while those that do not end in 1 are unhappy numbers. Have the programme find the first 8 happy numbers.
+
+For this app: read a single positive integer and print exactly True or False for whether that one number is happy.`,
+    testCases: [
+      { input: '19\n', expectedOutput: 'True\n' },
+      { input: '2\n', expectedOutput: 'False\n' },
+    ],
   },
   {
     id: 'ocr-reverse-it',
@@ -510,7 +613,13 @@ Create a program that allows the user to guess a number. A random number is gene
     title: 'Is this card valid?',
     description: `Have the programme take in a credit card number from a common credit card vendor (Visa, MasterCard, American Express, Discoverer) and validates it to make sure that it is a valid number (look into how credit cards use a checksum).
 
-***Don't use any real card details***`,
+***Don't use any real card details***
+
+For this app: read a string of digits with no spaces or dashes and print exactly True or False according to the Luhn checksum algorithm.`,
+    testCases: [
+      { input: '4532015112830366\n', expectedOutput: 'True\n' },
+      { input: '1234567812345678\n', expectedOutput: 'False\n' },
+    ],
   },
   {
     id: 'ocr-mortgage-calculator',
@@ -648,7 +757,13 @@ Create a program that allows the user to guess a number. A random number is gene
     id: 'ocr-what-have-the-romans-ever-done-for-us',
     number: 67,
     title: 'What have the Romans ever done for us?',
-    description: `Have the user enter a number and print it out in Roman numerals.`,
+    description: `Have the user enter a number and print it out in Roman numerals.
+
+For this app: read a single integer from 1 to 3999 and print its Roman numeral representation using standard uppercase subtractive notation (e.g. 4 is "IV", not "IIII").`,
+    testCases: [
+      { input: '1994\n', expectedOutput: 'MCMXCIV\n' },
+      { input: '58\n', expectedOutput: 'LVIII\n' },
+    ],
   },
   {
     id: 'ocr-semaphore',
@@ -830,7 +945,10 @@ where d stands for the game number starting from 1.`,
 77158542502016545090413245809786882778948721859617
 72107838435069186155435662884062257473692284509516
 20849603980134001723930671666823555245252804609722
-53503534226472524250874054075591789781264330331690`,
+53503534226472524250874054075591789781264330331690
+
+For this app: no input is needed (the 100 numbers above are fixed) - print just the first ten digits of their sum, with no other output.`,
+    testCases: [{ input: '', expectedOutput: '5537376230\n' }],
   },
   {
     id: 'ocr-fib-on-a-chi',
@@ -844,7 +962,10 @@ Hence the first 12 terms will be: F1=1, F2=1, F3=2, F4=3, F5=5, F6=8, F7=13, F8=
 
 The 12th term, F12, is the first term to contain three digits.
 
-What is the index of the first term in the Fibonacci sequence to contain 1000 digits?`,
+What is the index of the first term in the Fibonacci sequence to contain 1000 digits?
+
+For this app: no input is needed - print just the index as an integer, with no other output.`,
+    testCases: [{ input: '', expectedOutput: '4782\n' }],
   },
   {
     id: 'ocr-2-fiddy',
@@ -877,6 +998,12 @@ At the beginning of each subsequent batch, he takes from the envelope one sheet 
     title: 'Happy Hopper',
     description: `A sequence of n > 0 integers is called a happy hopper if the absolute values of the differences between successive elements take on all possible values 1 through n - 1. E.g. 1 4 2 3 is a happy hopper because the absolute differences are 3, 2, and 1, respectively. The definition implies that any sequence of a single integer is a happy hopper.
 
-Write a program to determine whether each of a number of sequences is a happy hopper.`,
+Write a program to determine whether each of a number of sequences is a happy hopper.
+
+For this app: read a single line of space-separated integers (one sequence) and print exactly True or False.`,
+    testCases: [
+      { input: '1 4 2 3\n', expectedOutput: 'True\n' },
+      { input: '1 2 3 4\n', expectedOutput: 'False\n' },
+    ],
   },
 ];
