@@ -23,7 +23,7 @@ export function PythonProblemList() {
       <div className="topic-head">
         <div>
           <div className="ref">Py</div>
-          <h2>Python Practice</h2>
+          <h2>Custom problems</h2>
         </div>
         {profile?.role === 'supporter' && (
           <Link href="/python/new" className="btn2">
