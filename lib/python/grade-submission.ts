@@ -21,7 +21,7 @@ export type GradingResult = {
 
 export type PyodideWorkerHandle = {
   run: (code: string, input: string) => Promise<PyodideRunResponse>;
-  check: (code: string) => Promise<string[]>;
+  check: (code: string) => Promise<{ findings: string[]; syntaxError: string | null }>;
 };
 
 export async function gradeSubmission(
@@ -58,8 +58,11 @@ export async function gradeSubmission(
   // One check per submission, not per test case - it inspects the
   // submitted source itself, so repeating it per test case would just
   // recompute the same answer. Advisory only: never affects
-  // overallResult above.
-  const bestPracticeFindings = await worker.check(code);
+  // overallResult above. syntaxError is ignored here - a run() already
+  // produces a proper traceback for code that doesn't parse, so there's
+  // nothing this needs to add (it's only load-bearing for saved code
+  // versions, which have no execution attempt of their own - §6.10).
+  const { findings: bestPracticeFindings } = await worker.check(code);
 
   return { overallResult, perTestResults, errorMessage, bestPracticeFindings };
 }

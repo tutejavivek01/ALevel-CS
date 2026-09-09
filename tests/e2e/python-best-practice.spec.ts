@@ -36,10 +36,15 @@ test('the best-practice checker flags a poorly-structured submission, stays quie
   );
 
   // Well-structured and correct: findings panel doesn't appear at all.
+  // A single-line function body (rather than an indented block) sidesteps
+  // a real CodeMirror-vs-keyboard-simulation issue: typing an indented
+  // line followed by a dedented one via page.keyboard.type() can produce
+  // a genuine IndentationError purely from the auto-indent/typed-
+  // whitespace interaction, not a product bug (see e.g. task 34's notes).
   await editor.click();
   await page.keyboard.press('Control+A');
   await page.keyboard.type(
-    'def compute_factorial(n):\n    return 1 if n == 0 else n * compute_factorial(n - 1)\n\n\nprint(compute_factorial(int(input())))'
+    'def compute_factorial(n): return 1 if n == 0 else n * compute_factorial(n - 1)\nprint(compute_factorial(int(input())))'
   );
   await page.getByRole('button', { name: 'Run' }).click();
   await expect(page.locator('.python-output.pass')).toBeVisible({ timeout: 10000 });

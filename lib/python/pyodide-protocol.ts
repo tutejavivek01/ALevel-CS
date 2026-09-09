@@ -34,7 +34,14 @@ export type PyodideRunResponse =
   | { type: 'result'; outcome: 'error'; stdout: string; traceback: string }
   | { type: 'result'; outcome: 'timeout'; stdout: string };
 
+// syntaxError added for saved code versions (design.md §6.10,
+// requirements.md §8.12) - null whenever code.parse() succeeds; a
+// version has no test case to run against, so this is its only signal
+// that the code doesn't even parse. Run's own callers (grade-submission
+// .ts) ignore it, since a real execution attempt already produces a
+// proper traceback for that case.
 export type PyodideCheckResponse = {
   type: 'check-result';
   findings: string[];
+  syntaxError: string | null;
 };

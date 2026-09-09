@@ -60,14 +60,17 @@ def __run_submission(code, stdin_text):
 // it never runs the code and never affects pass/fail.
 const CHECKER_SOURCE = `
 def __check_best_practice(code):
-    import ast, re, json
+    import ast, re, json, traceback
 
     try:
         tree = ast.parse(code)
     except SyntaxError:
-        # A syntax error is already reported by __run_submission's own
-        # traceback - nothing useful to add here.
-        return json.dumps({'findings': []})
+        # Surfaced as syntax_error for saved code versions (design.md
+        # §6.10, requirements.md §8.12), which have no test case to run
+        # against and so no other way to learn the code doesn't parse.
+        # findings stays empty either way - nothing else here is
+        # meaningful to check against a tree that doesn't exist.
+        return json.dumps({'findings': [], 'syntaxError': traceback.format_exc()})
 
     findings = []
 
@@ -109,7 +112,7 @@ def __check_best_practice(code):
         if len(line) > 100:
             findings.append(f'Line {line_number} is over 100 characters long.')
 
-    return json.dumps({'findings': findings})
+    return json.dumps({'findings': findings, 'syntaxError': None})
 `;
 
 // Loaded once per worker instance and kept warm across runs (design.md
@@ -156,8 +159,8 @@ self.onmessage = async (event) => {
   if (data.type === 'check') {
     await getPyodide();
     const resultJson = checkBestPractice(data.code);
-    const { findings } = JSON.parse(resultJson);
-    self.postMessage({ type: 'check-result', findings });
+    const { findings, syntaxError } = JSON.parse(resultJson);
+    self.postMessage({ type: 'check-result', findings, syntaxError });
     return;
   }
 

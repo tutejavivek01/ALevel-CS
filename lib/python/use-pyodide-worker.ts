@@ -86,7 +86,7 @@ export function usePyodideWorker() {
   // Best-practice/code-quality check (design.md §6.7/§6.8) - no timeout
   // needed here (unlike run()): the checker is pure, fast AST analysis,
   // never a student's own arbitrarily-long-running code.
-  function check(code: string): Promise<string[]> {
+  function check(code: string): Promise<{ findings: string[]; syntaxError: string | null }> {
     return new Promise((resolve, reject) => {
       const worker = workerRef.current;
       if (!worker) {
@@ -98,7 +98,7 @@ export function usePyodideWorker() {
         if (event.data.type !== 'check-result') return;
         worker!.removeEventListener('message', handleMessage);
         worker!.removeEventListener('error', handleError);
-        resolve(event.data.findings);
+        resolve({ findings: event.data.findings, syntaxError: event.data.syntaxError });
       }
       function handleError(event: ErrorEvent) {
         worker!.removeEventListener('message', handleMessage);
