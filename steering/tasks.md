@@ -37,6 +37,14 @@ seeding) exist specifically so later tasks don't have to reinvent them.
 - [x] 27. Dashboard: Python due-date banner
 - [x] 28. Data export
 - [x] 29. End-to-end polish & sign-off
+- [ ] 30. OCR challenge tables: schema + RLS
+- [ ] 31. Best-practice / code-quality checker
+- [ ] 32. OCR challenge content: descriptions
+- [ ] 33. OCR challenge list + static detail page
+- [ ] 34. OCR challenge test cases
+- [ ] 35. OCR challenge execution, grading & review
+- [ ] 36. Code submission via file upload
+- [ ] 37. End-to-end polish & sign-off (OCR challenge set)
 
 ---
 
@@ -497,3 +505,168 @@ every Python problem/submission/review, and glossary progress — spot
 
 **Done when:** all of the above hold on the deployed (not just local)
 app.
+
+## 30. OCR challenge tables: schema + RLS
+
+Per `design.md` §2.2/§3.2, requirements.md §8.8.
+
+- Migrations for the four new tables: `ocr_challenge_submissions`,
+  `ocr_challenge_submission_results`, `ocr_challenge_review_state`,
+  `ocr_challenge_reviews` — student-only writes to the first three,
+  supporter-only insert to the last, exactly the same pattern as the
+  existing `python_*` tables (task 20), minus the column-scoping trigger
+  `ocr_challenge_review_state` doesn't need (`design.md` §6.8).
+- A migration adding `best_practice_findings text[] not null default '{}'`
+  to the existing `python_submissions` table (`design.md` §2.2) — this
+  check applies to every submission, not just the new challenge set.
+- Confirm the role split directly against the database with each seeded
+  account's session, same as task 20: student can insert an
+  `ocr_challenge_submission`, supporter cannot; supporter can insert an
+  `ocr_challenge_review`, student cannot; student can set
+  `ocr_challenge_review_state.submitted_for_review_at` with no other
+  column on that row for a student session to abuse (confirm there
+  genuinely isn't one, rather than assuming it from the schema alone).
+
+**Done when:** those role-split checks pass, run manually against real
+sessions, same rigor as task 20 — schema-only, no UI yet.
+
+## 31. Best-practice / code-quality checker
+
+Per `design.md` §6.7's new bullet, requirements.md §8.10.
+
+- Extend `public/pyodide-worker.js` with a Python-side
+  `__check_best_practice(code)` function using the `ast` module: flags a
+  submission with no function/class definitions anywhere, non-`snake_case`
+  or single-letter identifiers (outside short loop counters), and
+  overlong lines.
+- Add the `{type: 'check', code}` / `{findings: string[]}` message pair to
+  `lib/python/pyodide-protocol.ts` and `lib/python/use-pyodide-worker.ts`.
+- Wire it into the *existing* custom-problem flow first
+  (`useSubmitPythonCode`/`PythonProblemDetail.tsx`): one `check` call per
+  submission, findings persisted into the new `best_practice_findings`
+  column and shown as advisory feedback, never affecting `overallResult`.
+  Deliberately proved out here, on the flow that already exists end to
+  end, before task 35 wires the same checker into the new OCR flow.
+
+**Done when:** submitting a one-liner with a single-letter variable name
+and no functions shows both findings; submitting well-structured code
+shows none; neither changes whether the submission is marked pass/fail.
+Confirmed with a Playwright test against real Python snippets — the
+checker's Python-side logic can't be unit-tested in Vitest (no Pyodide
+runtime there), per `design.md` §8.
+
+## 32. OCR challenge content: descriptions
+
+Per `design.md` §6.8, requirements.md §8.8. Content only — no test
+cases yet (task 34), no UI yet (task 33).
+
+- Create `lib/exercises/ocr-challenges.ts`: the `OcrChallenge` type and
+  all 80 entries (`id`, `number`, `title`, `description`, `extensions?`),
+  transcribed from OCR's "Coding Challenges Booklet" v3, following
+  `conventions.md`'s content-accuracy workflow.
+- Extract the one image the booklet contains (the chess piece-movement
+  diagram for "Checkmate checker") as a static asset under `public/`,
+  referenced via `imageUrl` on that one entry.
+- A Vitest structural-validity test: all 80 ids unique, every entry has a
+  non-empty title and description, ids follow the `ocr-<slug>` convention.
+
+**Done when:** all 80 titles/descriptions are present and correct against
+the source PDF, and the structural-validity test passes.
+
+## 33. OCR challenge list + static detail page
+
+Per `design.md` §6.8, mirrors task 22's "editor + static detail page"
+pattern.
+
+- `/python` becomes two visually distinct groups on the same page —
+  existing supporter-authored problems, then the fixed OCR set — per the
+  curated/personal resource-links precedent (§6.2). Placeholder
+  review-status badge for now (real status lands in task 35).
+- `/python/ocr/[challengeId]`: renders the challenge's description,
+  extensions (if any), image (if any), and a code editor pre-filled with
+  `starterCode` if set — no run/submit yet, matching task 22's own scope.
+
+**Done when:** all 80 challenges are reachable and render their correct
+content from `/python`; a challenge with no test cases shows no "Run"
+affordance at all.
+
+## 34. OCR challenge test cases
+
+Per `design.md` §6.8, requirements.md §8.8. The largest single task in
+this list by content volume, not logic — flagged here the same way task
+23 flagged Pyodide as "the riskiest," so it isn't mistaken for a
+2–4 hour task.
+
+- For each of the ~45–50 challenges identified as genuinely testable via
+  a single deterministic stdin/stdout run (`design.md` §6.8), hand-derive
+  at least one correct `{input, expectedOutput}` pair directly from the
+  challenge's own description — OCR publishes no solutions, so every one
+  must be independently worked out and verified, the same rigor already
+  applied to the FSM/trace-table exercises' expected answers.
+- Add `testCases` to those entries in `lib/exercises/ocr-challenges.ts`.
+  Leave every challenge in the non-testable/non-unique-output groups
+  (`design.md` §6.8) with `testCases` omitted entirely.
+
+**Done when:** every testable challenge's own worked solution actually
+passes its own test case when run through the real execution pipeline
+(task 31's checker doesn't apply here — this is about correctness, not
+style), and the structural-validity test from task 32 still passes with
+the new data.
+
+## 35. OCR challenge execution, grading & review
+
+Per `design.md` §6.8, mirrors tasks 25/26 collapsed into one task since
+the execution engine, timeout handling, and review-status derivation are
+all being reused unchanged, not rebuilt.
+
+- `lib/db/use-ocr-challenge-submissions.ts` and
+  `lib/db/use-ocr-challenge-reviews.ts`, mirroring
+  `use-python-submissions.ts`/`use-python-reviews.ts` exactly except for
+  the `challenge_id: text` key.
+- Wire "Run" (grading against every test case, task 31's best-practice
+  check, attempt history) and "Submit for review" + the review form into
+  `/python/ocr/[challengeId]`, reusing `deriveReviewStatus()`
+  (`lib/exercises/python-review-status.ts`) unchanged, per `design.md`
+  §6.8.
+- Replace task 33's placeholder review-status badge on `/python`'s OCR
+  group with the real derived status.
+
+**Done when:** a testable challenge is graded correctly against all its
+test cases and the result is saved permanently; a non-testable challenge
+has no "Run" button and its submission goes straight into the
+not-started → attempted → submitted-for-review → reviewed progression;
+both visible live on the supporter's session — matching task 26's own
+done-when, but for the new tables.
+
+## 36. Code submission via file upload
+
+Per `design.md` §6.7, requirements.md §8.9.
+
+- Add an "Upload .py file" control to the shared code-editor area: reads
+  the file's text client-side (the browser's File API) and replaces the
+  editor's current value, exactly as if typed. No new endpoint, no
+  server-side storage.
+- Applies to both `/python/[problemId]` and `/python/ocr/[challengeId]` —
+  a single shared change, not two.
+
+**Done when:** uploading a `.py` file populates the editor with its exact
+contents, editing it afterward works normally, and the resulting
+submission is indistinguishable in the database from one that was typed
+or pasted.
+
+## 37. End-to-end polish & sign-off (OCR challenge set)
+
+Per `design.md` §8, mirrors task 29 for this feature specifically.
+
+- Walk requirements.md §8.8–§8.10 top to bottom against the finished app,
+  the same acceptance-check standard as task 29.
+- Spot-check a sample of the 80 imported descriptions and a sample of the
+  hand-derived test cases directly against the source PDF, since nothing
+  automated can catch a transcription or derivation error.
+- Full Playwright coverage for the new flows: the two-group list page, a
+  non-testable challenge's manual-review-only path, a testable
+  challenge's full grading + review cycle, the best-practice checker on
+  both problem sources, and file upload.
+
+**Done when:** all of the above hold, and `steering/tasks.md` reflects
+every task in this list checked off.

@@ -208,6 +208,9 @@ Parent-authored, consisting of:
 - Optional starter code the student's editor is pre-filled with — see
   open item in §10.
 
+(A second, fixed source of problems — an exam board's published
+challenge set — is also available; see §8.8.)
+
 ### 8.2 Execution model
 Code runs entirely **client-side via Pyodide** (a WebAssembly Python
 interpreter) inside the student's browser. No server ever executes
@@ -265,6 +268,114 @@ mechanic already defined for subtopic flags (§2) — one consistent
   signal, preserving the student's self-assessment as the sole authority
   over that status (§1, §2).
 
+### 8.8 Fixed OCR challenge set
+
+Added 2026-09-09. In addition to problems the supporter authors ad hoc
+(§8.1–§8.7), the Python Practice section also offers a **fixed,
+exam-board-published set**: all 80 challenges from OCR's "Coding
+Challenges Booklet" (GCSE/A Level Computer Science, v3, ocr.org.uk). This
+is fixed, code-reviewed reference content, not parent-authored — it
+follows the same "content in code, not the database" pattern already used
+for the 13 spec topics, the 6 NEA sections, and every existing Unit 2
+exercise (trace tables, FSM machines, glossary terms), rather than going
+through the supporter's problem-authoring form. The two problem sources
+coexist in the same Python Practice list, visually distinguished — the
+same "two distinct lists, kept visually separate" treatment already used
+for curated vs. personal resource links (§3). Nothing about the existing
+supporter-authored flow changes; this adds a second, fixed source
+alongside it.
+
+- All 80 challenges are imported with their full description text and,
+  where the booklet includes one, an image. In practice the booklet
+  contains exactly one — a chess piece-movement diagram for "Checkmate
+  checker" — stored as a static image asset and referenced from that
+  problem's description. Where a challenge lists optional "Extensions,"
+  they're shown as stretch-goal notes within the same problem, not spun
+  out into separate gradable challenges.
+- OCR's booklet explicitly does not publish solutions ("there are many
+  ways in which these problems could be solved") and recommends A-Level
+  solutions include a GUI. Neither changes this app's execution model:
+  every problem still runs headless via the existing Pyodide/stdin-stdout
+  pipeline (§8.2) regardless of level, and every test case for the
+  auto-gradable subset below has to be hand-derived from the problem
+  description and verified for correctness during build — the same rigor
+  already applied to the FSM and trace-table exercises' expected answers.
+- Not every challenge can be meaningfully auto-graded in this execution
+  model. Of the 80, roughly 45–50 have a single, well-defined,
+  deterministic stdin/stdout behavior and get real test cases +
+  auto-grading exactly like a parent-authored problem. The rest are
+  **description-only, manual-review problems** (no test cases, no "Run"
+  grading — code goes straight to the existing review workflow, §8.6,
+  same as any problem with zero test cases already behaves today):
+  - Challenges that cannot run at all in a browser/Pyodide sandbox with no
+    display and no real network access — anything requiring a GUI, an
+    animation or graphical output (fireworks, the Mandelbrot set, Conway's
+    Game of Life, a semaphore animation), live web scraping or network
+    calls (the page-scraper and "Beautiful soup" challenges), or
+    video/GIF processing.
+  - Challenges whose correct output isn't unique or exactly matchable even
+    though they're otherwise deterministic and CLI-shaped — e.g. a random
+    password generator, Goldbach's conjecture (multiple valid prime pairs
+    sum to the same target), or a "minimum transfers" problem with more
+    than one valid solution. Checking a *property* of the output (e.g. "is
+    prime and sums to N") instead of an exact string match is a deliberate
+    non-goal for this pass (see §9/§10) — a possible future extension, not
+    built now.
+- The fixed set's mutable state (a student's submissions, test-case
+  results, code-quality check results, review status) is keyed to a
+  code-defined challenge id rather than a supporter-created database row,
+  so it needs its own progress-tracking schema at the design stage — not a
+  reuse of the parent-authored `python_problems`/`python_test_cases`
+  tables, which assume every problem is a row someone inserted. This
+  mirrors how `subtopic_status` already keys off a code-defined
+  `subtopic_id` slug rather than a foreign key.
+
+### 8.9 Code submission via file upload
+
+Added 2026-09-09. In addition to typing/pasting code directly into the
+editor (unchanged), a student can attach a local `.py` file, whose
+contents are read into the same editor — there's no separate
+upload-and-submit path and no server-side file storage; the uploaded text
+becomes the editor's content exactly as if it had been typed or pasted,
+then flows through the existing Run/Submit pipeline unchanged. Scoped to a
+single file, matching how every booklet challenge is a single
+self-contained script — not a multi-file project or zip upload.
+
+### 8.10 Best-practice / code-quality check
+
+Added 2026-09-09. Every submission (for any problem, parent-authored or
+from the fixed set) is also checked against a small set of Python
+best-practice rules, shown as separate, clearly-labelled feedback
+alongside the pass/fail test-case results — it never changes whether a
+submission counts as `pass`/`fail`/`timeout`/`error` (§8.3–§8.4). This is
+deliberately advisory, matching how a real code review separates "does it
+work" from "is it well written."
+
+Checked via a small custom rule-set built on Python's own `ast` module
+(already available in the same Pyodide runtime that executes submissions —
+no extra download), not a third-party linter: this Pyodide build's package
+set doesn't include pyflakes/pylint/flake8/pycodestyle, so using one of
+those would mean fetching it from PyPI over the network at submission
+time — the same kind of external runtime dependency this app deliberately
+avoided by self-hosting Pyodide's own assets (tech-stack.md, task 23). The
+initial rule set prioritises what the interview identified as most
+important for this app's audience:
+
+- **Decomposition & functions**: flags a submission with no function (or
+  class) definitions at all — OCR's own booklet introduction encourages
+  "use of OOP methodologies," and nearly every challenge naturally
+  decomposes into functions.
+- **Naming & readability**: flags non-`snake_case` function/variable
+  names, single-letter identifiers outside short loop counters, and
+  excessively long lines.
+
+Error-handling/robustness checks (e.g. bare `except:`, unvalidated
+`input()`) and anti-pattern checks (magic numbers, duplicated code, unused
+variables/imports) were considered and explicitly deferred — not because
+they're less valid, but to keep the first version's rule set small and its
+false-positive rate low. Either can be added later as an incremental
+change to the same rule-set module, not a redesign (§10).
+
 ## 9. Explicitly out of scope for this pass
 
 Carried over from `product.md`'s non-goals, restated as requirements-level
@@ -283,6 +394,10 @@ exclusions so they aren't accidentally reintroduced during design:
 - No general-purpose classroom/multi-student assignment features — §8
   remains one parent assigning problems to one student, not a rubric or
   grading system for a class.
+- Property/pattern-based auto-grading (checking a computed property of a
+  submission's output rather than an exact string match) — deferred per
+  §8.8; the handful of otherwise-CLI-shaped OCR challenges with
+  non-unique correct output are treated as manual-review-only instead.
 
 ## 10. Open items for design/build phase (not blocking, flagged for later)
 
@@ -299,3 +414,11 @@ exclusions so they aren't accidentally reintroduced during design:
 - Whether per-problem due-date thresholds should reuse the NEA's 14-day
   "upcoming" window or use a shorter one suited to smaller practice
   tasks (§8.1).
+- Whether the deferred best-practice rules (error handling,
+  anti-patterns) or property-based grading (§8.8/§8.10) get added in a
+  later pass.
+- Exact visual treatment distinguishing the fixed OCR set from
+  parent-authored problems in the `/python` list (badge vs. section
+  grouping, etc.) — a design-time decision, not a requirements-level one.
+- Whether OCR's listed "Extensions" ever become their own gradable
+  sub-challenges rather than stretch-goal notes.

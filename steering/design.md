@@ -58,6 +58,9 @@ erDiagram
     python_problems ||--o{ python_problem_reviews : receives
     python_submissions ||--o{ python_submission_results : has
     python_test_cases ||--o{ python_submission_results : checked_against
+    profiles ||--o{ ocr_challenge_submissions : submits
+    profiles ||--o{ ocr_challenge_reviews : reviews
+    ocr_challenge_submissions ||--o{ ocr_challenge_submission_results : has
 ```
 
 ### 2.2 Tables
@@ -178,6 +181,7 @@ python_submissions (
   code           text not null,
   overall_result text not null check (overall_result in ('pass','fail','timeout','error')),
   error_message  text,
+  best_practice_findings text[] not null default '{}',  -- added for §6.7/§6.8's code-quality check, applies regardless of problem source
   created_at     timestamptz not null default now()
 )
 
@@ -199,6 +203,53 @@ python_problem_reviews (
   created_at   timestamptz not null default now()
 )
 
+-- Mutable state for the fixed OCR challenge set (§6.8, requirements.md
+-- §8.8). challenge_id is a code-defined slug from
+-- /lib/exercises/ocr-challenges.ts, not a foreign key - the challenge
+-- content itself isn't in the database, the same pattern as
+-- subtopic_status's subtopic_id. Otherwise mirrors
+-- python_submissions/python_submission_results exactly.
+ocr_challenge_submissions (
+  id             bigserial primary key,
+  challenge_id   text not null,
+  submitted_by   uuid not null references profiles(id),
+  code           text not null,
+  overall_result text not null check (overall_result in ('pass','fail','timeout','error')),
+  error_message  text,
+  best_practice_findings text[] not null default '{}',
+  created_at     timestamptz not null default now()
+)
+
+ocr_challenge_submission_results (
+  id                 bigserial primary key,
+  submission_id      bigint not null references ocr_challenge_submissions(id) on delete cascade,
+  test_case_position int not null,  -- indexes into the challenge's code-defined test case array, not a database row
+  passed             boolean not null,
+  actual_output      text not null
+)
+
+-- Only column besides the key is submitted_for_review_at, and it's
+-- entirely student-owned - unlike python_problems there's no
+-- supporter-owned content column on this same row (title/description
+-- are code-defined, not stored), so this needs a single student-only
+-- policy and no column-scoping trigger (contrast with §3.2).
+ocr_challenge_review_state (
+  challenge_id            text primary key,
+  submitted_for_review_at timestamptz,
+  updated_by              uuid not null references profiles(id)
+)
+
+-- Parent feedback (§8.6/§8.8) - same shape and role split as
+-- python_problem_reviews; see the updated §2.3 for why this is a fourth
+-- small table rather than a merge.
+ocr_challenge_reviews (
+  id           bigserial primary key,
+  challenge_id text not null,
+  body         text,
+  created_by   uuid not null references profiles(id),
+  created_at   timestamptz not null default now()
+)
+
 -- Activity trail (§6). Populated by application code alongside each
 -- mutation above (see §7.7), not by database triggers.
 activity_events (
@@ -211,18 +262,20 @@ activity_events (
 )
 ```
 
-### 2.3 Why three small comment-shaped tables, not one generic one
+### 2.3 Why four small comment-shaped tables, not one generic one
 
-`subtopic_flags`, `nea_notes`, and `python_problem_reviews` all have the
-same shape (body + author + timestamp). A single polymorphic `comments`
-table (with a `target_type`/`target_id` pair) would remove that
-repetition — but it would also mean every RLS policy on it has to branch
-on `target_type` to decide who's allowed to write, and every query needs
-a runtime cast instead of a typed foreign key. Three small tables keep
-each RLS policy a one-line role check and each TypeScript query fully
-typed. This is the same "three similar lines beats a premature
-abstraction" call as `CLAUDE.md`'s general guidance — worth naming
-explicitly since the repetition is easy to spot and "fix" later.
+`subtopic_flags`, `nea_notes`, `python_problem_reviews`, and (§6.8)
+`ocr_challenge_reviews` all have the same shape (body + author +
+timestamp). A single polymorphic `comments` table (with a
+`target_type`/`target_id` pair) would remove that repetition — but it
+would also mean every RLS policy on it has to branch on `target_type` to
+decide who's allowed to write, and every query needs a runtime cast
+instead of a typed foreign key. Four small tables keep each RLS policy a
+one-line role check and each TypeScript query fully typed. This is the
+same "three similar lines beats a premature abstraction" call as
+`CLAUDE.md`'s general guidance — worth naming explicitly since the
+repetition is easy to spot and "fix" later, and worth re-confirming each
+time a new table joins the pattern rather than assuming it still holds.
 
 ## 3. Auth & permissions
 
@@ -270,6 +323,14 @@ and `python_problem_reviews` (supporter-only writes). `nea_state`,
 either role, matching requirements.md §4's "jointly managed" framing —
 their policies check only that `auth.uid()` matches *some* profile, not a
 specific role.
+
+The fixed OCR challenge set's tables (§6.8) follow the identical role
+split — `ocr_challenge_submissions`/`ocr_challenge_submission_results`/
+`ocr_challenge_review_state` are student-only writes,
+`ocr_challenge_reviews` is supporter-only — with one simplification over
+`python_problems`: `ocr_challenge_review_state` has no supporter-owned
+column to protect, so it needs no column-scoping trigger, just a plain
+student-only insert/update policy.
 
 ### 3.3 Sessions
 
@@ -327,9 +388,18 @@ worth a quick decision before build starts.
 /nea                             Six-section tracker, notes log, deadline
                                  state, marks-worth-complete figure
 /practice/theory-of-computation  Trace tables, FSM step-tracer, glossary
-/python                          Problem list (due dates, review status)
-/python/[problemId]              Description, test cases, code editor,
-                                 run/submit, attempt history, reviews
+/python                          Problem list: supporter-authored
+                                 problems and the fixed OCR challenge set
+                                 as two distinct groups (due dates, review
+                                 status)
+/python/[problemId]              Supporter-authored problem: description,
+                                 test cases, code editor, run/submit,
+                                 attempt history, reviews
+/python/ocr/[challengeId]        Fixed OCR challenge: description (+
+                                 image where the booklet has one), test
+                                 cases where auto-gradable, code editor,
+                                 run/submit or review-only, attempt
+                                 history, reviews
 /python/new                      Supporter-only problem creation form
 /export                          Triggers the JSON data export (§10)
 ```
@@ -453,7 +523,12 @@ assumption, easy to add hidden cases to later if it turns out to matter.
 chosen over Monaco for a much smaller bundle — consistent with already
 accepting one large one-time download for Pyodide (`tech-stack.md`); a
 second heavy editor bundle on top of that would compound the cost this
-app is trying to keep low on a phone.
+app is trying to keep low on a phone. A student may also attach a local
+`.py` file (requirements.md §8.9): its contents are read client-side
+(the browser's own File API) and replace the editor's current value
+exactly as if typed — there's no separate upload endpoint and no
+server-side file storage, since the result is the same `code` string
+already flowing through Run/Submit below.
 
 **Execution pipeline** (`/python/[problemId]`, student-only to run):
 
@@ -461,19 +536,28 @@ app is trying to keep low on a phone.
 sequenceDiagram
     participant UI as Client Component
     participant W as Web Worker (Pyodide)
-    UI->>W: postMessage({code, testCases})
-    Note over W: pyodide.setInterruptBuffer(sharedBuffer)
-    loop for each test case
-        W->>W: feed stdin, capture stdout, run code
+    UI->>W: {type: 'init', interruptBuffer}
+    loop for each test case, in order
+        UI->>W: {type: 'run', code, input}
+        alt finished within timeout
+            W-->>UI: {outcome: 'ok' | 'error', stdout, ...}
+        else UI writes SIGINT into interruptBuffer after N seconds
+            Note over W: Pyodide raises KeyboardInterrupt
+            W-->>UI: {outcome: 'timeout'}
+        end
+        Note over UI: a timeout or error stops the loop early;<br/>a wrong-output 'ok' still grades every remaining case
     end
-    alt finished within timeout
-        W-->>UI: {overallResult, perTestResults}
-    else UI writes 1 into sharedBuffer after N seconds
-        Note over W: Pyodide raises KeyboardInterrupt
-        W-->>UI: {overallResult: 'timeout'}
-    end
-    UI->>UI: persist python_submissions + results (§2.2)
+    UI->>W: {type: 'check', code}
+    Note over W: ast.parse(code), walk for best-practice findings (§6.8)
+    W-->>UI: {findings: string[]}
+    UI->>UI: persist submission + per-test results + findings (§2.2)
 ```
+
+(Corrected from this design's original single-batched-message sketch to
+match what actually shipped: the loop runs on the main thread, one
+`run` message per test case, reusing the same warm worker — see task
+25's commit message for why continuing past a wrong-output case, but not
+past a timeout or error, is the right behavior.)
 
 - Pyodide is loaded once per tab and kept warm in the worker across runs
   (not reloaded per submission) — the ~10MB+ cost from `tech-stack.md` is
@@ -492,6 +576,23 @@ sequenceDiagram
   timeout silently can't work without it.
 - A constant `PYTHON_EXEC_TIMEOUT_MS` (proposed: `5000`) lives in one
   config module next to `NEA_UPCOMING_WINDOW_DAYS` (§6.3).
+- **Best-practice / code-quality check** (requirements.md §8.10): a
+  single `{type: 'check', code}` round trip to the same worker, sent
+  once per submission after the test-case loop (not once per test case —
+  it inspects the submitted source itself, so repeating it per case
+  would just recompute the same answer). The worker parses the code with
+  Python's built-in `ast` module and walks the tree for two rule
+  categories: no function/class definitions anywhere (decomposition), and
+  non-`snake_case` or single-letter identifiers plus overlong lines
+  (naming/readability) — the two categories confirmed as priorities,
+  with error-handling and anti-pattern rules deliberately deferred
+  (requirements.md §8.10). Findings are a flat list of short strings,
+  shown as advisory feedback alongside the pass/fail results and
+  persisted in the new `best_practice_findings` column (§2.2) — they
+  never affect `overallResult`. This logic lives in the same plain,
+  unbundled `public/pyodide-worker.js` as the existing runner (it must —
+  `ast` only exists inside the Pyodide runtime, not in TypeScript), so
+  it's added as a sibling Python function in that file, not a new module.
 
 **Review workflow** — designed as derived state, not a manually-shared
 status column:
@@ -522,6 +623,68 @@ same append-only-log pattern already used for `nea_notes` and
   alongside a note ("can you check if this is efficient enough?") rather
   than the parent being pinged the instant tests go green.
 
+### 6.8 Fixed OCR challenge set (req. §8.8)
+
+All 80 challenges live as typed data in a new
+`lib/exercises/ocr-challenges.ts` — the same "content in code" pattern as
+`lib/spec/topics.ts`/`lib/spec/nea.ts` and every existing Unit 2 exercise
+module. The database only stores mutable state keyed by each challenge's
+code-defined `id` (a slug, e.g. `ocr-factorial-finder`), via the four new
+tables in §2.2. This is a genuinely different key shape from
+`python_problems`'s bigint-FK design — there is no database row for the
+challenge itself to reference — so the new tables are new, not a reuse of
+`python_test_cases`/`python_submissions`: `ocr_challenge_submissions.
+challenge_id` is `text`, not a foreign key, exactly like
+`subtopic_status.subtopic_id`.
+
+```ts
+type OcrChallenge = {
+  id: string;                  // stable slug, e.g. 'ocr-factorial-finder'
+  number: number;               // the booklet's own numbering, for citation
+  title: string;
+  description: string;          // full prompt text, verbatim from the booklet
+  extensions?: string[];        // optional stretch-goal bullets, shown inline
+  imageUrl?: string;             // only 'ocr-checkmate-checker' has one
+  testCases?: { input: string; expectedOutput: string }[]; // absent = manual-review-only
+  starterCode?: string;
+};
+```
+
+A Vitest test (the same referential-integrity spirit as `isKnownSubtopicId`,
+§8) asserts structural validity across all 80 entries at once: unique
+ids, non-empty title/description, and — for every challenge that does
+carry `testCases` — at least one entry with a non-empty
+`expectedOutput`. This can't catch a *wrong* hand-derived expected
+output (only re-deriving it from the booklet by hand can — see
+requirements.md §8.8's note that OCR publishes no solutions), but it does
+catch mechanical mistakes (a typo'd empty test case, a duplicate id)
+before they reach a student.
+
+**Review status** reuses `deriveReviewStatus()`
+(`lib/exercises/python-review-status.ts`) completely unchanged — it was
+already written generically over
+`{hasSubmissions, submittedForReviewAt, latestReviewAt}` with no
+reference to `python_problems` specifically, so the OCR set's four-state
+status is the exact same function, fed from
+`ocr_challenge_submissions`/`ocr_challenge_review_state`/
+`ocr_challenge_reviews` instead of the parent-authored tables.
+
+**List page**: `/python` renders two visually distinct groups on the same
+page — supporter-authored problems, then the fixed OCR set — the same
+"two distinct lists, kept visually separate" treatment already used for
+curated vs. personal resource links (§6.2), not a second nav item or
+route. A challenge with no `testCases` shows no "Run" affordance at all
+on its detail page (the manual-review-only group from requirements.md
+§8.8) — submitted code goes straight into the same review workflow as
+every other problem (above), just with nothing to grade first.
+
+**RLS** follows the same role split as §3.2, with one simplification:
+`ocr_challenge_review_state` has only one column besides its key
+(`submitted_for_review_at`), and that column is entirely student-owned —
+unlike `python_problems`, there's no supporter-owned column on the same
+row to protect from a student overwrite, so it needs a single
+student-only insert/update policy and no column-scoping trigger.
+
 ## 7. Cross-cutting: save reliability pattern (principles.md §1)
 
 Every mutating hook in §4 follows the same shape so "never silently
@@ -548,14 +711,20 @@ Concrete targets, extending `conventions.md`'s general split:
   actual-vs-expected-output comparator; a standalone test asserting every
   `subtopic_id` used anywhere in `/lib/exercises` and any seed data
   exists in `/lib/spec` (the referential-integrity check called out in
-  §2.2, since the database can't enforce it).
+  §2.2, since the database can't enforce it); the same structural-validity
+  check for the OCR challenge data module — unique ids, non-empty
+  descriptions, every declared test case has an expected output (§6.8).
 - **Playwright**: student status change persists across reload and is
   visible on the supporter's session; a supporter's role cannot write a
   subtopic status even via direct interaction; an NEA note append doesn't
   remove earlier notes; a Python submission that infinite-loops resolves
   to a distinct "timed out" result within a bounded wait, without
   freezing the page; a failed save shows a retry control rather than
-  silently disappearing.
+  silently disappearing; the best-practice checker's findings for a
+  known-good and a known-bad code snippet submitted through the real UI —
+  like the rest of the execution pipeline, this can only be verified by
+  actually running Python in a real browser, not in Vitest, which has no
+  Pyodide runtime available (§6.8).
 
 ## 9. Design decisions made now, flagged for confirmation
 
@@ -580,3 +749,18 @@ silently decided:
 7. `PYTHON_EXEC_TIMEOUT_MS = 5000` and `NEA_UPCOMING_WINDOW_DAYS = 14`
    proposed as concrete starting constants, kept in one config module so
    either is a one-line change if wrong in practice.
+8. The fixed OCR challenge set uses new, purpose-built tables keyed by a
+   code-defined text slug (`ocr_challenge_*`), not a reuse of
+   `python_problems`'s bigint-FK tables — there's no database row for the
+   challenge content itself. §6.8.
+9. `best_practice_findings` is stored as a plain `text[]` column (added to
+   both `python_submissions` and the new `ocr_challenge_submissions`), not
+   a JSONB blob or a separate findings table — every existing table in
+   this schema uses plain typed columns, and a flat list of short strings
+   doesn't need its own relational shape. §2.2.
+10. The best-practice check runs once per submission via its own worker
+    message, not once per test case — it inspects the submitted source
+    itself, so re-running it per test case would be redundant. §6.7.
+11. File upload reads a `.py` file's contents client-side into the
+    existing editor state; there's no server-side file storage and no new
+    upload endpoint. §6.7, requirements.md §8.9.
