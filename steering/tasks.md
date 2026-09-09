@@ -44,7 +44,7 @@ seeding) exist specifically so later tasks don't have to reinvent them.
 - [x] 34. OCR challenge test cases
 - [x] 35. OCR challenge execution, grading & review
 - [x] 36. Code submission via file upload
-- [ ] 37. End-to-end polish & sign-off (OCR challenge set)
+- [x] 37. End-to-end polish & sign-off (OCR challenge set)
 
 ---
 

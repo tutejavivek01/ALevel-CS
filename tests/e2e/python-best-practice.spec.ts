@@ -69,3 +69,32 @@ test('the best-practice checker flags a poorly-structured submission, stays quie
   await expect(page.locator('.python-output.fail')).toBeVisible({ timeout: 10000 });
   await expect(page.locator('.best-practice-panel')).toBeVisible();
 });
+
+// gradeSubmission() (lib/python/grade-submission.ts) is shared between the
+// parent-authored flow above and the OCR flow, so the checker logic itself
+// is already proven - this asserts the OCR detail page actually renders
+// .best-practice-panel for a real OCR submission, which the shared-helper
+// test above can't see.
+test('the best-practice checker also renders on an OCR challenge submission', async ({
+  page,
+}) => {
+  await page.goto('/login');
+  await page.getByLabel('Email').fill(process.env.E2E_STUDENT_EMAIL!);
+  await page.getByLabel('Password').fill(process.env.E2E_STUDENT_PASSWORD!);
+  await page.getByRole('button', { name: 'Sign in' }).click();
+  await page.waitForURL('/');
+  await page.goto('/python/ocr/ocr-factorial-finder');
+
+  const editor = page.locator('.cm-content');
+  await editor.click();
+  await page.keyboard.press('Control+A');
+  await page.keyboard.type(`x = int(input())\nimport math\nprint(math.factorial(x))`);
+  await page.getByRole('button', { name: 'Run' }).click();
+
+  await expect(page.locator('.python-output')).toBeVisible({ timeout: 45000 });
+  await expect(page.locator('.best-practice-panel')).toBeVisible();
+  await expect(page.locator('.best-practice-panel')).toContainText('No functions or classes');
+  await expect(page.locator('.best-practice-panel')).toContainText(
+    "Variable 'x' has a non-descriptive single-letter name"
+  );
+});

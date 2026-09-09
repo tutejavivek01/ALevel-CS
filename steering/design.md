@@ -644,7 +644,7 @@ type OcrChallenge = {
   title: string;
   description: string;          // full prompt text, verbatim from the booklet
   extensions?: string[];        // optional stretch-goal bullets, shown inline
-  imageUrl?: string;             // only 'ocr-checkmate-checker' has one
+  imageUrl?: string;             // reserved, unused - see ocr-challenges.ts header
   testCases?: { input: string; expectedOutput: string }[]; // absent = manual-review-only
   starterCode?: string;
 };

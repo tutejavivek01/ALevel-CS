@@ -1,10 +1,45 @@
 import { config } from 'dotenv';
 import path from 'node:path';
+import { Client } from 'pg';
 import { test, expect, type Browser } from '@playwright/test';
 import { createClient } from '@supabase/supabase-js';
 import { OCR_CHALLENGES } from '../../lib/exercises/ocr-challenges';
 
 config({ path: path.join(process.cwd(), '.env.local'), quiet: true });
+
+// ocr_challenge_submissions/ocr_challenge_review_state key off a fixed,
+// shared, permanent challenge id with no student delete policy (design.md
+// §6.8), so a test asserting a full not-started -> attempted ->
+// submitted-for-review -> reviewed lifecycle can't rely on RLS-scoped
+// clients to reset it between runs. Only this one test - which actually
+// depends on starting from a clean slate, unlike the read-only "accumulate
+// forever, just check the newest row" tests elsewhere in this suite -
+// reaches past RLS via a direct Postgres connection, the same one
+// scripts/migrate.mjs uses.
+async function resetOcrChallengeState(challengeId: string) {
+  const client = new Client({
+    connectionString: process.env.SUPABASE_DB_URL,
+    ssl: { rejectUnauthorized: false },
+  });
+  await client.connect();
+  try {
+    await client.query(
+      'delete from ocr_challenge_submission_results where submission_id in (select id from ocr_challenge_submissions where challenge_id = $1)',
+      [challengeId]
+    );
+    await client.query('delete from ocr_challenge_submissions where challenge_id = $1', [
+      challengeId,
+    ]);
+    await client.query('delete from ocr_challenge_reviews where challenge_id = $1', [
+      challengeId,
+    ]);
+    await client.query('delete from ocr_challenge_review_state where challenge_id = $1', [
+      challengeId,
+    ]);
+  } finally {
+    await client.end();
+  }
+}
 
 async function loginAs(browser: Browser, email: string, password: string) {
   const context = await browser.newContext();
@@ -54,6 +89,7 @@ test('a non-testable challenge has no Run button and its submission goes straigh
 }) => {
   const challenge = OCR_CHALLENGES.find((c) => c.id === 'ocr-fireworks')!;
   expect(challenge.testCases).toBeUndefined();
+  await resetOcrChallengeState(challenge.id);
 
   const student = await loginAs(
     browser,

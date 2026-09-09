@@ -285,13 +285,18 @@ for curated vs. personal resource links (§3). Nothing about the existing
 supporter-authored flow changes; this adds a second, fixed source
 alongside it.
 
-- All 80 challenges are imported with their full description text and,
-  where the booklet includes one, an image. In practice the booklet
-  contains exactly one — a chess piece-movement diagram for "Checkmate
-  checker" — stored as a static image asset and referenced from that
-  problem's description. Where a challenge lists optional "Extensions,"
-  they're shown as stretch-goal notes within the same problem, not spun
-  out into separate gradable challenges.
+- All 80 challenges are imported with their full description text.
+  Where a challenge lists optional "Extensions," they're shown as
+  stretch-goal notes within the same problem, not spun out into
+  separate gradable challenges. The booklet's one diagram (a chess
+  piece-movement illustration for "Checkmate checker") is **not**
+  reproduced as an image asset, updated from the original plan here: no
+  PDF image-extraction tool was available in the build environment, so
+  standard chess piece movement is spelled out as text in that
+  challenge's description instead (documented in
+  `lib/exercises/ocr-challenges.ts`'s header comment) — arguably more
+  usable for deriving test cases than a cropped image would have been
+  anyway.
 - OCR's booklet explicitly does not publish solutions ("there are many
   ways in which these problems could be solved") and recommends A-Level
   solutions include a GUI. Neither changes this app's execution model:
@@ -301,12 +306,21 @@ alongside it.
   description and verified for correctness during build — the same rigor
   already applied to the FSM and trace-table exercises' expected answers.
 - Not every challenge can be meaningfully auto-graded in this execution
-  model. Of the 80, roughly 45–50 have a single, well-defined,
-  deterministic stdin/stdout behavior and get real test cases +
-  auto-grading exactly like a parent-authored problem. The rest are
-  **description-only, manual-review problems** (no test cases, no "Run"
-  grading — code goes straight to the existing review workflow, §8.6,
-  same as any problem with zero test cases already behaves today):
+  model. Of the 80, **22** ended up with real test cases and
+  auto-grading exactly like a parent-authored problem — updated from
+  the original "roughly 45–50" estimate once the actual derivation work
+  was done: OCR's prose leaves the exact input/output format
+  unspecified for most challenges (e.g. "makes a table" or "spell out a
+  number"), and exact-match grading against a format this app invented
+  would unfairly fail a correct solution that reasonably chose a
+  different one — exactly the "genuinely checkable, not decorative" bar
+  `principles.md` §3 sets. The 22 are the ones where a single,
+  unambiguous contract could be stated plainly (see each one's "For
+  this app:" paragraph in `lib/exercises/ocr-challenges.ts`). The rest
+  are **description-only, manual-review problems** (no test cases, no
+  "Run" grading — code goes straight to the existing review workflow,
+  §8.6, same as any problem with zero test cases already behaves
+  today):
   - Challenges that cannot run at all in a browser/Pyodide sandbox with no
     display and no real network access — anything requiring a GUI, an
     animation or graphical output (fireworks, the Mandelbrot set, Conway's
