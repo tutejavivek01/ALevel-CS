@@ -16,6 +16,15 @@ vi.mock('@/lib/db/use-nea-state', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/db/use-nea-state')>();
   return { ...actual, useNeaState: () => ({ data: {}, isLoading: false }) };
 });
+// DeadlineBanner also reads OCR challenge due dates/review statuses
+// (design.md §6.11) - same reasoning as the mocks above.
+vi.mock('@/lib/db/use-ocr-challenge-reviews', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/db/use-ocr-challenge-reviews')>();
+  return { ...actual, useOcrChallengeDueDates: () => ({ data: {}, isLoading: false }) };
+});
+vi.mock('@/lib/db/use-ocr-challenge-review-statuses', () => ({
+  useOcrChallengeReviewStatuses: () => ({ data: {}, isLoading: false }),
+}));
 test('dashboard page renders the specification map with all 13 topics', () => {
   render(<DashboardPage />);
   expect(screen.getByText('Specification map')).toBeDefined();

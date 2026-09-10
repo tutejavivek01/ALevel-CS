@@ -48,7 +48,7 @@ seeding) exist specifically so later tasks don't have to reinvent them.
 - [x] 38. Retire the ad hoc ("custom") problem source
 - [x] 39. Saved code versions: schema + RLS
 - [x] 40. Saved code versions: UI wiring
-- [ ] 41. Due dates on OCR challenges
+- [x] 41. Due dates on OCR challenges
 - [ ] 42. End-to-end polish & sign-off (Python Practice overhaul)
 
 ---

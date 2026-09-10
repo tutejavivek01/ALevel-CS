@@ -13,6 +13,7 @@ import {
   useAddOcrChallengeReview,
   useOcrChallengeReviewState,
   useSubmitOcrChallengeForReview,
+  useSetOcrChallengeDueDate,
 } from '@/lib/db/use-ocr-challenge-reviews';
 import {
   useOcrChallengeCodeVersions,
@@ -22,6 +23,7 @@ import {
 import { useAddOcrChallengeVersionComment } from '@/lib/db/use-ocr-challenge-version-comments';
 import { useCurrentProfile } from '@/lib/db/use-current-profile';
 import { deriveReviewStatus } from '@/lib/exercises/python-review-status';
+import { isOcrChallengeOverdue } from '@/lib/ocr-challenge-deadlines';
 import { PYTHON_EXEC_TIMEOUT_MS } from '@/lib/config';
 
 type Props = {
@@ -158,6 +160,7 @@ export function OcrChallengeDetail({ challenge }: Props) {
   const saveVersion = useSaveOcrChallengeCodeVersion(challenge.id);
   const submitForReview = useSubmitOcrChallengeForReview(challenge.id);
   const addReview = useAddOcrChallengeReview(challenge.id);
+  const setDueDate = useSetOcrChallengeDueDate(challenge.id);
 
   const result = submit.data;
   const hasAttempts = (submissions ?? []).length > 0 || (versions ?? []).length > 0;
@@ -166,6 +169,12 @@ export function OcrChallengeDetail({ challenge }: Props) {
     submittedForReviewAt: reviewState?.submitted_for_review_at ?? null,
     latestReviewAt: (reviews ?? [])[0]?.created_at ?? null,
   });
+
+  // Jointly editable by either role (design.md §6.11, requirements.md
+  // §8.13) - a genuine departure from every other piece of OCR mutable
+  // state, which is student-writes/supporter-reviews only.
+  const dueDate = reviewState?.due_date ?? null;
+  const isOverdue = status !== 'reviewed' && !!dueDate && isOcrChallengeOverdue(dueDate);
 
   return (
     <Card>
@@ -180,6 +189,20 @@ export function OcrChallengeDetail({ challenge }: Props) {
         <span className="status-badge" data-status={status}>
           {STATUS_LABEL[status]}
         </span>
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
+        <span className="field-label">Due date</span>
+        <input
+          type="date"
+          value={dueDate ?? ''}
+          onChange={(e) => setDueDate.mutate(e.target.value || null)}
+        />
+        {isOverdue && (
+          <span className="due overdue" style={{ fontWeight: 600 }}>
+            Overdue
+          </span>
+        )}
       </div>
 
       <p className="blurb" style={{ whiteSpace: 'pre-wrap' }}>
