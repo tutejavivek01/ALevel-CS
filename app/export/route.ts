@@ -20,13 +20,19 @@ const EXPORTED_TABLES = [
   'python_submissions',
   'python_submission_results',
   'python_problem_reviews',
+  'ocr_challenge_submissions',
+  'ocr_challenge_submission_results',
+  'ocr_challenge_review_state',
+  'ocr_challenge_reviews',
+  'ocr_challenge_code_versions',
+  'ocr_challenge_version_comments',
   'activity_events',
 ] as const;
 
 // proxy.ts already redirects an unauthenticated request before it
 // reaches here, but this checks again explicitly rather than trusting
 // that alone - same "enforce it at the boundary, not just the UI"
-// standard as every RLS policy and the /python/new role check.
+// standard as every RLS policy.
 export async function GET() {
   const supabase = await createClient();
   const {

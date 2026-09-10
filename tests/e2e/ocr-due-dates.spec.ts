@@ -120,9 +120,13 @@ test('either account can set a due date, live on the other session, and an overd
     overall_result: 'pass',
     best_practice_findings: [],
   });
+  // Backdate this a minute: deriveReviewStatus compares it with the
+  // review row's server-generated created_at with a strict `>`, so a
+  // client clock even slightly ahead of the database's would otherwise
+  // leave the status stuck at submitted-for-review and flake this test.
   await studentAdmin
     .from('ocr_challenge_review_state')
-    .update({ submitted_for_review_at: new Date().toISOString() })
+    .update({ submitted_for_review_at: new Date(Date.now() - 60_000).toISOString() })
     .eq('challenge_id', challenge.id);
   const {
     data: { user: supporterUser },

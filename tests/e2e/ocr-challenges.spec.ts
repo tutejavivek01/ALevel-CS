@@ -52,3 +52,13 @@ test('an unknown challenge id 404s', async ({ page }) => {
   const response = await page.goto('/python/ocr/not-a-real-challenge');
   expect(response?.status()).toBe(404);
 });
+
+test('the retired ad hoc problem routes no longer exist', async ({ page }) => {
+  // design.md §6.9, requirements.md §8.11 - the creation form and the
+  // per-problem detail page are deleted from the product surface.
+  const newResponse = await page.goto('/python/new');
+  expect(newResponse?.status()).toBe(404);
+
+  const detailResponse = await page.goto('/python/1');
+  expect(detailResponse?.status()).toBe(404);
+});

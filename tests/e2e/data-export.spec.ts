@@ -38,6 +38,12 @@ test('the export contains every table, with counts matching the database directl
     'python_submissions',
     'python_submission_results',
     'python_problem_reviews',
+    'ocr_challenge_submissions',
+    'ocr_challenge_submission_results',
+    'ocr_challenge_review_state',
+    'ocr_challenge_reviews',
+    'ocr_challenge_code_versions',
+    'ocr_challenge_version_comments',
     'activity_events',
   ];
   for (const table of expectedTables) {
@@ -51,7 +57,13 @@ test('the export contains every table, with counts matching the database directl
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     { auth: { autoRefreshToken: false, persistSession: false } }
   );
-  for (const table of ['profiles', 'subtopic_status', 'nea_state', 'python_problems']) {
+  for (const table of [
+    'profiles',
+    'subtopic_status',
+    'nea_state',
+    'python_problems',
+    'ocr_challenge_code_versions',
+  ]) {
     const { count } = await admin.from(table).select('*', { count: 'exact', head: true });
     expect(body[table].length).toBe(count);
   }

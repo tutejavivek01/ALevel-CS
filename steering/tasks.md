@@ -49,7 +49,7 @@ seeding) exist specifically so later tasks don't have to reinvent them.
 - [x] 39. Saved code versions: schema + RLS
 - [x] 40. Saved code versions: UI wiring
 - [x] 41. Due dates on OCR challenges
-- [ ] 42. End-to-end polish & sign-off (Python Practice overhaul)
+- [x] 42. End-to-end polish & sign-off (Python Practice overhaul)
 
 ---
 
