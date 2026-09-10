@@ -22,20 +22,26 @@ async function resetOcrChallengeState(challengeId: string) {
       'delete from ocr_challenge_version_comments where version_id in (select id from ocr_challenge_code_versions where challenge_id = $1)',
       [challengeId]
     );
-    await client.query('delete from ocr_challenge_code_versions where challenge_id = $1', [
-      challengeId,
-    ]);
+    await client.query(
+      'delete from ocr_challenge_code_versions where challenge_id = $1',
+      [challengeId]
+    );
     await client.query(
       'delete from ocr_challenge_submission_results where submission_id in (select id from ocr_challenge_submissions where challenge_id = $1)',
       [challengeId]
     );
-    await client.query('delete from ocr_challenge_submissions where challenge_id = $1', [
-      challengeId,
-    ]);
-    await client.query('delete from ocr_challenge_reviews where challenge_id = $1', [challengeId]);
-    await client.query('delete from ocr_challenge_review_state where challenge_id = $1', [
-      challengeId,
-    ]);
+    await client.query(
+      'delete from ocr_challenge_submissions where challenge_id = $1',
+      [challengeId]
+    );
+    await client.query(
+      'delete from ocr_challenge_reviews where challenge_id = $1',
+      [challengeId]
+    );
+    await client.query(
+      'delete from ocr_challenge_review_state where challenge_id = $1',
+      [challengeId]
+    );
   } finally {
     await client.end();
   }
@@ -71,8 +77,12 @@ test('Save works on a manual-review-only challenge with no Run, reaches attempte
   );
 
   await student.page.goto(`/python/ocr/${challenge.id}`);
-  await expect(student.page.getByRole('button', { name: 'Run' })).toHaveCount(0);
-  await expect(student.page.getByRole('button', { name: 'Save' })).toBeVisible();
+  await expect(student.page.getByRole('button', { name: 'Run' })).toHaveCount(
+    0
+  );
+  await expect(
+    student.page.getByRole('button', { name: 'Save' })
+  ).toBeVisible();
   await expect(
     student.page.locator('.status-badge[data-status="not-started"]')
   ).toBeVisible();
@@ -83,13 +93,26 @@ test('Save works on a manual-review-only challenge with no Run, reaches attempte
   await student.page.keyboard.type('draw_mandelbrot()');
   await student.page.getByRole('button', { name: 'Save' }).click();
 
-  await expect(student.page.locator('.version-row')).toContainText('draw_mandelbrot()');
+  // Save runs a Pyodide check() first, which can cold-load the worker -
+  // allow for that the same way the execution specs do, rather than the
+  // 5s default.
+  await expect(student.page.locator('.version-row')).toContainText(
+    'draw_mandelbrot()',
+    {
+      timeout: 45000,
+    }
+  );
   await expect(
     student.page.locator('.status-badge[data-status="attempted"]')
   ).toBeVisible();
 
   await supporter.page.goto(`/python/ocr/${challenge.id}`);
-  await expect(supporter.page.locator('.version-row')).toContainText('draw_mandelbrot()');
+  await expect(supporter.page.locator('.version-row')).toContainText(
+    'draw_mandelbrot()',
+    {
+      timeout: 10000,
+    }
+  );
   await expect(
     supporter.page.locator('.status-badge[data-status="attempted"]')
   ).toBeVisible();
@@ -109,13 +132,17 @@ test('Save works on a manual-review-only challenge with no Run, reaches attempte
   await expect(
     student.page.locator('.status-badge[data-status="attempted"]')
   ).toBeVisible();
-  await expect(student.page.locator('.empty-note', { hasText: 'No reviews yet.' })).toBeVisible();
+  await expect(
+    student.page.locator('.empty-note', { hasText: 'No reviews yet.' })
+  ).toBeVisible();
 
   await student.context.close();
   await supporter.context.close();
 });
 
-test('Save also works on a testable challenge, independently of Run', async ({ page }) => {
+test('Save also works on a testable challenge, independently of Run', async ({
+  page,
+}) => {
   const challenge = OCR_CHALLENGES.find((c) => c.id === 'ocr-palindromes')!;
   expect(challenge.testCases?.length).toBeGreaterThan(0);
 
@@ -137,6 +164,12 @@ test('Save also works on a testable challenge, independently of Run', async ({ p
   await page.keyboard.type('x = = 5');
   await page.getByRole('button', { name: 'Save' }).click();
 
-  await expect(page.locator('.version-row').first()).toContainText('x = = 5');
-  await expect(page.locator('.version-row').first()).toContainText('SyntaxError');
+  // Save's Pyodide check() can cold-load the worker - see the note in the
+  // test above.
+  await expect(page.locator('.version-row').first()).toContainText('x = = 5', {
+    timeout: 45000,
+  });
+  await expect(page.locator('.version-row').first()).toContainText(
+    'SyntaxError'
+  );
 });

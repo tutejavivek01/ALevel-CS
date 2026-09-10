@@ -50,6 +50,7 @@ seeding) exist specifically so later tasks don't have to reinvent them.
 - [x] 40. Saved code versions: UI wiring
 - [x] 41. Due dates on OCR challenges
 - [x] 42. End-to-end polish & sign-off (Python Practice overhaul)
+- [x] 43. OCR challenge list: inline due dates & filter
 
 ---
 
@@ -810,3 +811,40 @@ Per `design.md` §8, mirrors tasks 29/37 for this round specifically.
 
 **Done when:** all of the above hold, and `steering/tasks.md` reflects
 every task in this list checked off.
+
+## 43. OCR challenge list: inline due dates & filter
+
+Per `design.md` §6.8/§6.11, requirements.md §8.13/§8.14. A small
+follow-on to the overhaul, not part of its sign-off.
+
+- Pure `filterOcrChallenges(challenges, query)` in
+  `lib/exercises/ocr-challenge-search.ts` — case-insensitive substring
+  over booklet number / title / description, empty query returns all —
+  with a Vitest suite mirroring `__tests__/ocr-challenge-deadlines.test.ts`.
+- Add a `mirrors` option to `useOptimisticMutation` (optimistic update +
+  rollback + settle-invalidate for denormalised aggregate queries the
+  same write touches) and use it in `useSetOcrChallengeDueDate` to keep
+  the `['ocr-challenge-due-dates']` map in sync, so a row-level edit
+  shows immediately rather than after the Realtime round trip.
+- Extract `components/OcrChallengeRow.tsx` from `OcrChallengeList.tsx`:
+  the row becomes a `<div className="python-row">` wrapping a `<Link>`
+  (title + status badge, the sole navigation target) and a sibling
+  `<label>` holding an `<input type="date">` *outside* the link. The row
+  calls `useSetOcrChallengeDueDate(challenge.id)` itself; its value comes
+  from the `dueDates` map passed down, not a per-row subscription.
+- Filter box (`<input type="search" aria-label="Search challenges">`,
+  new `.python-search`) at the top of the list `<Card>`, after
+  `.topic-head`; reuse `.empty-note` for the no-match state.
+- CSS: new `.python-search`, `.python-row-main`, `.python-row-due`;
+  `.python-row` becomes the flex container (padding + hover move onto
+  it); existing `.python-row .title` / `.due` rules untouched.
+- E2E: extend `tests/e2e/ocr-challenges.spec.ts` for the filter flow;
+  add a list-row due-date test to `tests/e2e/ocr-due-dates.spec.ts`
+  reusing `resetOcrChallengeState`.
+
+**Done when:** the list filters as you type and shows the empty note on
+no match; a due date set from a list row updates the row immediately,
+persists across reload, propagates to a second session, and shows on the
+detail page; the existing detail-page due-date flow and the overdue flag
+still pass; lint, Vitest, a clean build, and the full Playwright suite
+are green.

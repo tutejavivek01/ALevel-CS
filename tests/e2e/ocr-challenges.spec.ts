@@ -13,10 +13,14 @@ test.beforeEach(async ({ page }) => {
   await page.waitForURL('/');
 });
 
-test('the /python list shows all 80 OCR challenges as a single list', async ({ page }) => {
+test('the /python list shows all 80 OCR challenges as a single list', async ({
+  page,
+}) => {
   await page.goto('/python');
 
-  await expect(page.getByRole('heading', { name: 'OCR Coding Challenges' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'OCR Coding Challenges' })
+  ).toBeVisible();
 
   // All 80 are reachable from the list - spot-check the first, a
   // middle, and the last rather than asserting every single link.
@@ -25,19 +29,46 @@ test('the /python list shows all 80 OCR challenges as a single list', async ({ p
   await expect(page.getByText('80. Happy Hopper')).toBeVisible();
 });
 
-test('a challenge renders its correct content and a working editor', async ({ page }) => {
+test('the search box filters the list as you type', async ({ page }) => {
+  // requirements.md §8.14 - a find-as-you-type filter over the fixed set.
+  await page.goto('/python');
+  const search = page.getByLabel('Search challenges');
+
+  await search.fill('sudoku');
+  await expect(page.getByText('44. Sudoku')).toBeVisible();
+  await expect(page.getByText('1. Factorial Finder')).toHaveCount(0);
+  await expect(page.getByText('80. Happy Hopper')).toHaveCount(0);
+
+  await search.fill('');
+  await expect(page.getByText('1. Factorial Finder')).toBeVisible();
+  await expect(page.getByText('80. Happy Hopper')).toBeVisible();
+
+  await search.fill('zznomatch');
+  await expect(page.locator('.empty-note')).toBeVisible();
+  await expect(page.locator('.python-row')).toHaveCount(0);
+});
+
+test('a challenge renders its correct content and a working editor', async ({
+  page,
+}) => {
   const challenge = OCR_CHALLENGES.find((c) => c.id === 'ocr-fizz-buzz')!;
   await page.goto(`/python/ocr/${challenge.id}`);
 
-  await expect(page.getByRole('heading', { name: challenge.title })).toBeVisible();
-  await expect(page.locator('.blurb')).toContainText('replicates the famous game Fizz Buzz');
+  await expect(
+    page.getByRole('heading', { name: challenge.title })
+  ).toBeVisible();
+  await expect(page.locator('.blurb')).toContainText(
+    'replicates the famous game Fizz Buzz'
+  );
   await expect(page.locator('.cm-content')).toBeVisible();
   // fizz-buzz got real test cases in task 34, so Run is enabled here -
   // execution itself is covered by ocr-challenge-execution.spec.ts.
   await expect(page.getByRole('button', { name: 'Run' })).toBeEnabled();
 });
 
-test('a challenge with no test cases shows the manual-review note', async ({ page }) => {
+test('a challenge with no test cases shows the manual-review note', async ({
+  page,
+}) => {
   // ocr-fireworks is one of the 58 permanently non-testable challenges
   // (requirements.md §8.8) - it never gets test cases, unlike the 22
   // that did once task 34 hand-derived them.
@@ -45,7 +76,9 @@ test('a challenge with no test cases shows the manual-review note', async ({ pag
   expect(challenge.testCases).toBeUndefined();
   await page.goto(`/python/ocr/${challenge.id}`);
 
-  await expect(page.getByText('Manual review only - no automated tests')).toBeVisible();
+  await expect(
+    page.getByText('Manual review only - no automated tests')
+  ).toBeVisible();
 });
 
 test('an unknown challenge id 404s', async ({ page }) => {

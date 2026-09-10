@@ -760,7 +760,17 @@ since §6.9 retires the supporter-authored list this page used to also
 show. A challenge with no `testCases` shows no "Run" affordance at all on
 its detail page (the manual-review-only group from requirements.md §8.8)
 — submitted code goes straight into the same review workflow as every
-other problem (above), just with nothing to grade first.
+other problem (above), just with nothing to grade first. The list also
+carries a find-as-you-type filter box (requirements.md §8.14):
+`filterOcrChallenges()` in `lib/exercises/ocr-challenge-search.ts` — pure,
+Vitest-covered, split out of the verbatim-content `ocr-challenges.ts` the
+same way `ocr-challenge-deadlines.ts` is — runs client-side over the
+in-memory `OCR_CHALLENGES` array with no query round-trip. Each row also
+carries an inline `<input type="date">`, rendered *outside* the row's
+navigation `<Link>`, for setting that challenge's due date without opening
+its detail page (§6.11); the row is extracted as
+`components/OcrChallengeRow.tsx` so the per-challenge
+`useSetOcrChallengeDueDate` hook isn't called inside a `.map()`.
 
 **RLS** follows the same role split as §3.2. As of §6.11,
 `ocr_challenge_review_state` is the one exception to "student-only
@@ -875,7 +885,14 @@ disabled condition in `OcrChallengeDetail.tsx` is updated the same way.
 `due_date` lives on `ocr_challenge_review_state` (§2.2) — one shared
 value per challenge, not per account, consistent with §1's "one shared
 progress record." Either role can set it via a small date-picker control
-on the challenge detail page. RLS: both insert and update policies now
+on the challenge detail page and on each `/python` list row
+(requirements.md §8.13). Both controls write through the same
+`useSetOcrChallengeDueDate` mutation, which — via `useOptimisticMutation`'s
+`mirrors` option — also optimistically patches the all-challenges
+`['ocr-challenge-due-dates']` map (`useOcrChallengeDueDates`) the list and
+the dashboard banner read from, so a row's picker and its deadline caption
+update on the same render instead of waiting on the Realtime round trip.
+RLS: both insert and update policies now
 check `is_role('student') or is_role('supporter')`, with
 `guard_ocr_challenge_review_state_supporter_write` (§2.2) rejecting any
 supporter-originated write that also touches `submitted_for_review_at` —

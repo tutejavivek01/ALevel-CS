@@ -17,7 +17,9 @@ export function ocrChallengeReviewsQueryKey(challengeId: string) {
   return ['ocr-challenge-reviews', challengeId] as const;
 }
 
-async function fetchOcrChallengeReviews(challengeId: string): Promise<OcrChallengeReview[]> {
+async function fetchOcrChallengeReviews(
+  challengeId: string
+): Promise<OcrChallengeReview[]> {
   const supabase = createClient();
   const { data, error } = await supabase
     .from('ocr_challenge_reviews')
@@ -32,7 +34,10 @@ export function useOcrChallengeReviews(challengeId: string) {
   const queryClient = useQueryClient();
   const queryKey = ocrChallengeReviewsQueryKey(challengeId);
 
-  const query = useQuery({ queryKey, queryFn: () => fetchOcrChallengeReviews(challengeId) });
+  const query = useQuery({
+    queryKey,
+    queryFn: () => fetchOcrChallengeReviews(challengeId),
+  });
 
   useRealtimeTables(['ocr_challenge_reviews'], () => {
     queryClient.invalidateQueries({ queryKey });
@@ -100,7 +105,10 @@ export function useOcrChallengeReviewState(challengeId: string) {
   const queryClient = useQueryClient();
   const queryKey = ocrChallengeReviewStateQueryKey(challengeId);
 
-  const query = useQuery({ queryKey, queryFn: () => fetchOcrChallengeReviewState(challengeId) });
+  const query = useQuery({
+    queryKey,
+    queryFn: () => fetchOcrChallengeReviewState(challengeId),
+  });
 
   useRealtimeTables(['ocr_challenge_review_state'], () => {
     queryClient.invalidateQueries({ queryKey });
@@ -132,7 +140,11 @@ export function useSetOcrChallengeDueDate(challengeId: string) {
 
       const { error } = await supabase
         .from('ocr_challenge_review_state')
-        .upsert({ challenge_id: challengeId, due_date: dueDate, updated_by: user.id });
+        .upsert({
+          challenge_id: challengeId,
+          due_date: dueDate,
+          updated_by: user.id,
+        });
       if (error) throw error;
     },
     updater: (previous, dueDate) => {
@@ -144,6 +156,19 @@ export function useSetOcrChallengeDueDate(challengeId: string) {
         updated_by: state?.updated_by ?? 'optimistic',
       };
     },
+    // The /python list row and the dashboard deadline banner both read the
+    // all-challenges due-date map, not this single row - patch it in the
+    // same render so a row-level picker doesn't snap back until Realtime
+    // catches up (design.md §6.11).
+    mirrors: [
+      {
+        queryKey: ocrChallengeDueDatesQueryKey(),
+        updater: (previous, dueDate) => ({
+          ...((previous as Record<string, string | null> | undefined) ?? {}),
+          [challengeId]: dueDate,
+        }),
+      },
+    ],
   });
 }
 
@@ -165,11 +190,13 @@ export function useSubmitOcrChallengeForReview(challengeId: string) {
       } = await supabase.auth.getUser();
       if (!user) throw new Error('Not signed in');
 
-      const { error } = await supabase.from('ocr_challenge_review_state').upsert({
-        challenge_id: challengeId,
-        submitted_for_review_at: new Date().toISOString(),
-        updated_by: user.id,
-      });
+      const { error } = await supabase
+        .from('ocr_challenge_review_state')
+        .upsert({
+          challenge_id: challengeId,
+          submitted_for_review_at: new Date().toISOString(),
+          updated_by: user.id,
+        });
       if (error) throw error;
     },
     updater: (previous) => {
@@ -192,7 +219,9 @@ export function ocrChallengeDueDatesQueryKey() {
   return ['ocr-challenge-due-dates'] as const;
 }
 
-async function fetchOcrChallengeDueDates(): Promise<Record<string, string | null>> {
+async function fetchOcrChallengeDueDates(): Promise<
+  Record<string, string | null>
+> {
   const supabase = createClient();
   const { data, error } = await supabase
     .from('ocr_challenge_review_state')

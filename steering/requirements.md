@@ -481,11 +481,28 @@ challenge state (§8.8) already works.
   (§8.6/§8.12's status model) is flagged with a visually distinct color —
   mirroring NEA's "status is not complete" condition (§4) so a challenge
   the supporter already reviewed doesn't keep nagging as overdue.
+- Added 2026-09-10. The due date can be set or changed straight from the
+  `/python` list row, not only from the challenge's own detail page — the
+  per-row deadline indicator doubles as an inline editable control, so
+  assigning dates across several challenges at once doesn't mean opening
+  each one. Still one shared date per challenge, still jointly editable by
+  either role.
 - Whether this also feeds the existing dashboard overdue banner
   (currently populated from NEA sections and parent-authored Python
   problems) alongside the on-challenge flag is a design-time decision
   (§10) — the requirements-level need is just that overdue is visually
   distinguishable somewhere the student/supporter will see it.
+
+### 8.14 Filtering the OCR challenge list
+
+Added 2026-09-10. The `/python` list of all 80 challenges (§8.8) gets a
+plain text box at the top that narrows the list as you type: a challenge
+stays visible if what you typed appears, case-insensitively, anywhere in
+its booklet number, title, or description. An empty box shows all 80; a
+query that matches nothing shows a short "nothing matches" note rather
+than a blank card. No category facets, no saved filters, no ranking — a
+find-as-you-type convenience over a fixed, known set, not a search
+surface over open-ended content.
 
 ## 9. Explicitly out of scope for this pass
 

@@ -1,22 +1,19 @@
 'use client';
 
-import Link from 'next/link';
+import { useState } from 'react';
 import { Card } from './Card';
 import { OCR_CHALLENGES } from '@/lib/exercises/ocr-challenges';
+import { filterOcrChallenges } from '@/lib/exercises/ocr-challenge-search';
 import { useOcrChallengeReviewStatuses } from '@/lib/db/use-ocr-challenge-review-statuses';
 import { useOcrChallengeDueDates } from '@/lib/db/use-ocr-challenge-reviews';
-import { isOcrChallengeOverdue } from '@/lib/ocr-challenge-deadlines';
-
-const STATUS_LABEL: Record<string, string> = {
-  'not-started': 'Not started',
-  attempted: 'Attempted',
-  'submitted-for-review': 'Submitted for review',
-  reviewed: 'Reviewed',
-};
+import { OcrChallengeRow } from './OcrChallengeRow';
 
 export function OcrChallengeList() {
   const { data: reviewStatuses } = useOcrChallengeReviewStatuses();
   const { data: dueDates } = useOcrChallengeDueDates();
+  const [query, setQuery] = useState('');
+
+  const visible = filterOcrChallenges(OCR_CHALLENGES, query);
 
   return (
     <Card>
@@ -27,35 +24,29 @@ export function OcrChallengeList() {
         </div>
       </div>
 
-      <div className="python-list">
-        {OCR_CHALLENGES.map((challenge) => {
-          const status = reviewStatuses?.[challenge.id] ?? 'not-started';
-          const dueDate = dueDates?.[challenge.id];
-          const overdue = status !== 'reviewed' && !!dueDate && isOcrChallengeOverdue(dueDate);
-          return (
-            <Link
+      <input
+        type="search"
+        className="python-search"
+        aria-label="Search challenges"
+        placeholder="Search challenges…"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+      />
+
+      {visible.length === 0 ? (
+        <p className="empty-note">No challenges match “{query.trim()}”.</p>
+      ) : (
+        <div className="python-list">
+          {visible.map((challenge) => (
+            <OcrChallengeRow
               key={challenge.id}
-              href={`/python/ocr/${challenge.id}`}
-              className="python-row"
-            >
-              <div>
-                <div className="title">
-                  {challenge.number}. {challenge.title}
-                </div>
-                {!challenge.testCases && <div className="due">Manual review only</div>}
-                {dueDate && (
-                  <div className={`due${overdue ? ' overdue' : ''}`}>
-                    {overdue ? 'Overdue' : 'Due'}: {dueDate}
-                  </div>
-                )}
-              </div>
-              <span className="status-badge" data-status={status}>
-                {STATUS_LABEL[status]}
-              </span>
-            </Link>
-          );
-        })}
-      </div>
+              challenge={challenge}
+              status={reviewStatuses?.[challenge.id] ?? 'not-started'}
+              dueDate={dueDates?.[challenge.id] ?? null}
+            />
+          ))}
+        </div>
+      )}
     </Card>
   );
 }

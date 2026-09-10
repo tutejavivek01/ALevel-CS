@@ -25,15 +25,18 @@ async function resetOcrChallengeState(challengeId: string) {
       'delete from ocr_challenge_submission_results where submission_id in (select id from ocr_challenge_submissions where challenge_id = $1)',
       [challengeId]
     );
-    await client.query('delete from ocr_challenge_submissions where challenge_id = $1', [
-      challengeId,
-    ]);
-    await client.query('delete from ocr_challenge_reviews where challenge_id = $1', [
-      challengeId,
-    ]);
-    await client.query('delete from ocr_challenge_review_state where challenge_id = $1', [
-      challengeId,
-    ]);
+    await client.query(
+      'delete from ocr_challenge_submissions where challenge_id = $1',
+      [challengeId]
+    );
+    await client.query(
+      'delete from ocr_challenge_reviews where challenge_id = $1',
+      [challengeId]
+    );
+    await client.query(
+      'delete from ocr_challenge_review_state where challenge_id = $1',
+      [challengeId]
+    );
   } finally {
     await client.end();
   }
@@ -83,19 +86,28 @@ test('either account can set a due date, live on the other session, and an overd
   await supporter.page.locator('input[type="date"]').blur();
 
   await student.page.goto(`/python/ocr/${challenge.id}`);
-  await expect(student.page.locator('input[type="date"]')).toHaveValue('2099-06-01', {
-    timeout: 10000,
-  });
-  await expect(student.page.getByText('Overdue', { exact: true })).toHaveCount(0);
+  await expect(student.page.locator('input[type="date"]')).toHaveValue(
+    '2099-06-01',
+    {
+      timeout: 10000,
+    }
+  );
+  await expect(student.page.getByText('Overdue', { exact: true })).toHaveCount(
+    0
+  );
 
   // Student changes it to a past date - still jointly editable either
   // direction - and it's flagged overdue since the challenge isn't
   // reviewed yet.
   await student.page.locator('input[type="date"]').fill('2020-01-01');
   await student.page.locator('input[type="date"]').blur();
-  await expect(student.page.getByText('Overdue', { exact: true })).toBeVisible();
+  await expect(
+    student.page.getByText('Overdue', { exact: true })
+  ).toBeVisible();
 
-  await expect(supporter.page.getByText('Overdue', { exact: true })).toBeVisible({
+  await expect(
+    supporter.page.getByText('Overdue', { exact: true })
+  ).toBeVisible({
     timeout: 10000,
   });
 
@@ -126,20 +138,95 @@ test('either account can set a due date, live on the other session, and an overd
   // leave the status stuck at submitted-for-review and flake this test.
   await studentAdmin
     .from('ocr_challenge_review_state')
-    .update({ submitted_for_review_at: new Date(Date.now() - 60_000).toISOString() })
+    .update({
+      submitted_for_review_at: new Date(Date.now() - 60_000).toISOString(),
+    })
     .eq('challenge_id', challenge.id);
   const {
     data: { user: supporterUser },
   } = await admin.auth.getUser();
-  await admin
-    .from('ocr_challenge_reviews')
-    .insert({ challenge_id: challenge.id, body: 'Looks good!', created_by: supporterUser!.id });
+  await admin.from('ocr_challenge_reviews').insert({
+    challenge_id: challenge.id,
+    body: 'Looks good!',
+    created_by: supporterUser!.id,
+  });
 
   await student.page.reload();
-  await expect(student.page.locator('.status-badge[data-status="reviewed"]')).toBeVisible({
+  await expect(
+    student.page.locator('.status-badge[data-status="reviewed"]')
+  ).toBeVisible({
     timeout: 10000,
   });
-  await expect(student.page.getByText('Overdue', { exact: true })).toHaveCount(0);
+  await expect(student.page.getByText('Overdue', { exact: true })).toHaveCount(
+    0
+  );
+
+  await student.context.close();
+  await supporter.context.close();
+});
+
+test('a due date set from a /python list row persists, propagates, and shows on the detail page', async ({
+  browser,
+}) => {
+  // requirements.md §8.13 / design.md §6.11 - the due date is now
+  // jointly editable straight from the list row, not only the detail
+  // page. Uses a different challenge from the test above so the two stay
+  // independent under retries. ocr-sudoku is manual-review-only (no test
+  // cases), which also proves the picker works on a row with no Run.
+  const challenge = OCR_CHALLENGES.find((c) => c.id === 'ocr-sudoku')!;
+  await resetOcrChallengeState(challenge.id);
+
+  const student = await loginAs(
+    browser,
+    process.env.E2E_STUDENT_EMAIL!,
+    process.env.E2E_STUDENT_PASSWORD!
+  );
+  const supporter = await loginAs(
+    browser,
+    process.env.E2E_SUPPORTER_EMAIL!,
+    process.env.E2E_SUPPORTER_PASSWORD!
+  );
+
+  await student.page.goto('/python');
+  // The list mounts 80 rows; wait for its queries to settle so every
+  // row's onChange handler is hydrated before we type into one.
+  await student.page.waitForLoadState('networkidle');
+  const row = student.page.locator('.python-row', {
+    hasText: `${challenge.number}. ${challenge.title}`,
+  });
+  await row.locator('input[type="date"]').fill('2099-06-01');
+  await row.locator('input[type="date"]').blur();
+
+  // The row's own picker and its caption reflect it without waiting on
+  // the Realtime round trip (useOptimisticMutation's mirrors option).
+  await expect(row.locator('input[type="date"]')).toHaveValue('2099-06-01');
+  await expect(row.getByText('Due: 2099-06-01')).toBeVisible();
+
+  // Persists across a reload.
+  await student.page.reload();
+  await expect(
+    student.page
+      .locator('.python-row', {
+        hasText: `${challenge.number}. ${challenge.title}`,
+      })
+      .locator('input[type="date"]')
+  ).toHaveValue('2099-06-01', { timeout: 10000 });
+
+  // Propagates to the other session's list.
+  await supporter.page.goto('/python');
+  await expect(
+    supporter.page
+      .locator('.python-row', {
+        hasText: `${challenge.number}. ${challenge.title}`,
+      })
+      .locator('input[type="date"]')
+  ).toHaveValue('2099-06-01', { timeout: 10000 });
+
+  // And the detail page shows the same value.
+  await student.page.goto(`/python/ocr/${challenge.id}`);
+  await expect(student.page.locator('input[type="date"]')).toHaveValue(
+    '2099-06-01'
+  );
 
   await student.context.close();
   await supporter.context.close();
