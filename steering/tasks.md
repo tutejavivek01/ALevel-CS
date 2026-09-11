@@ -51,6 +51,9 @@ seeding) exist specifically so later tasks don't have to reinvent them.
 - [x] 41. Due dates on OCR challenges
 - [x] 42. End-to-end polish & sign-off (Python Practice overhaul)
 - [x] 43. OCR challenge list: inline due dates & filter
+- [x] 44. Topic spec-detail content module
+- [x] 45. Watch & revise content module
+- [x] 46. Topic detail pages: UI & sign-off
 
 ---
 
@@ -848,3 +851,98 @@ persists across reload, propagates to a second session, and shows on the
 detail page; the existing detail-page due-date flow and the overdue flag
 still pass; lint, Vitest, a clean build, and the full Playwright suite
 are green.
+
+## 44. Topic spec-detail content module
+
+Per `design.md` §6.12, requirements.md §11.1. Content-heavy: this is a
+transcription task, not 2–4 hours of logic — the same way task 34 was
+flagged. Budget the time for getting the AQA content right, not for the
+data shape.
+
+- `lib/spec/spec-content.ts`: the `SpecSection` / `TopicSpecContent`
+  types and `SPEC_CONTENT` — 13 entries, one per topic 4.1–4.13, keyed
+  by `ref` to match `Topic.ref`, in order.
+- Transcribe **verbatim** from `reference/aqa-cs-7517-spec-content.md`
+  §§4.1–4.13 (skip 4.14 — that's the NEA). Mirror the reference file's
+  own numbered headings as `sections`; where the file nests sub-numbered
+  points (4.1.1.1–16, 4.13.1.1–5), carry them in `points`. Do not
+  summarise down to the checklist labels — `principles.md` §2. Header
+  comment citing the reference file and `conventions.md`'s
+  content-accuracy workflow; cite it in the commit too.
+- `lib/spec/index.ts`: re-export `SPEC_CONTENT`, the types, and
+  `getSpecContentForTopic(topic)`.
+- Extend `__tests__/spec-integrity.test.ts`: `SPEC_CONTENT` covers
+  4.1–4.13 in order (`.map(c => c.ref)` deep-equals `TOPICS.map(t =>
+  t.ref)`); every topic has ≥1 section; every `section.ref` starts with
+  `` `${topic.ref}.` ``; every section has a non-empty `title` and
+  either `detail` or ≥1 `points`; a per-topic combined-text length floor
+  so a section can't be silently gutted; `getSpecContentForTopic`
+  resolves for every topic.
+
+**Done when:** all 13 topics have their full spec content transcribed
+and the extended integrity test passes; `npm test` and a clean build
+are green (no UI yet).
+
+## 45. Watch & revise content module
+
+Per `design.md` §6.12, requirements.md §11.2.
+
+- `lib/spec/watch-resources.ts`: the `WatchResource` /
+  `TopicWatchResources` types and `WATCH_RESOURCES` — 13 entries keyed
+  by `ref`, transcribed from `reference/aqa-cs-video-resources.md` (the
+  per-topic mapping table plus the channel/site link lists).
+- Every `url` is a channel/site link copied from the reference file, and
+  each one actually opened and confirmed to resolve during authoring. No
+  `watch?v=` / `youtu.be/` / `/shorts/` URLs. `kind` splits video
+  channels (`'watch'`) from revision/notes sites (`'revise'`); `hint`
+  carries the "search this channel for 4.x" label.
+- `lib/spec/index.ts`: re-export `WATCH_RESOURCES`, the types, and
+  `getWatchResourcesForTopic(topic)`.
+- Extend `__tests__/spec-integrity.test.ts`: `WATCH_RESOURCES` covers
+  4.1–4.13 in order; every topic has ≥1 resource; every `url` is
+  `https://`; every resource has a `name` and a valid `kind`; **no**
+  `url` matches `/watch\?v=|youtu\.be\/|\/shorts\//`;
+  `getWatchResourcesForTopic` resolves for every topic.
+
+**Done when:** all 13 topics have their watch/revise resources, every
+link has been confirmed to resolve, and the extended integrity test
+passes; `npm test` and a clean build are green.
+
+## 46. Topic detail pages: UI & sign-off
+
+Per `design.md` §6.12, requirements.md §11. Mirrors tasks 29/37/42 for
+this feature.
+
+- `components/TopicSpecDetail.tsx` (server component): `<h3>Specification
+  detail</h3>` then one `<details className="spec-section">` per
+  section, collapsed by default — mono `ref` + `title` in the
+  `<summary>` (as `<span>`s, not headings), `detail` paragraphs and a
+  `<ul className="spec-points">` for `points` in the body.
+- `components/TopicWatchResources.tsx` (server component): `<h3>Watch &
+  revise</h3>`, a one-line "these are starting points, not deep links to
+  one video" caption, then the links grouped `watch` / `revise` using
+  the existing `.res-link` style.
+- `app/(app)/topic/[topicId]/page.tsx`: render both between
+  `<TopicChecklist>` and the curated `Resources` block, guarded on
+  `getSpecContentForTopic` / `getWatchResourcesForTopic`.
+- `app/globals.css`: `.spec-section` / `summary` (custom marker,
+  `list-style:none`) / `.spec-section-body` / `.spec-points` /
+  `.watch-group` / `.watch-hint`, all from existing design tokens,
+  checked in light and dark.
+- E2E: extend `tests/e2e/topics.spec.ts` — for `computation` (4.4),
+  assert the spec-detail heading renders, a known sub-section ref is
+  visible, expanding it reveals known text, the watch & revise heading
+  and a known link render, no link href matches `watch?v=`, and a `.seg`
+  status button is still present and enabled. The existing 13-topic loop
+  (single `<h2>` = title) must still pass.
+- Walk requirements.md §11 top to bottom against the running app.
+  Spot-check a sample of the transcribed spec detail (a few sub-sections
+  across 2–3 topics) against `reference/aqa-cs-7517-spec-content.md`, and
+  click every watch/revise link for a couple of topics — nothing
+  automated catches a transcription error or a wrong-video link.
+
+**Done when:** every topic page shows its full spec detail (collapsible)
+and watch & revise section; the status control, flags, "last touched"
+and Realtime sync are unregressed; requirements.md §11 all holds on the
+running app; lint, Vitest, a clean build and the full Playwright suite
+are green; and `steering/tasks.md` has 44–46 checked off.

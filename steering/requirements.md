@@ -530,6 +530,12 @@ exclusions so they aren't accidentally reintroduced during design:
   version/comment histories, on an OCR challenge — there is exactly one
   shared due date and one shared version history per challenge, not a
   per-account copy (§1, §8.12, §8.13).
+- No status tracking at the AQA sub-section (4.x.y) granularity — the §2
+  checklist items stay the single tracked unit, and the §11 spec detail
+  is read-only reference content sitting alongside them (§11.1).
+- No embedded video players on topic detail pages — outbound links only,
+  which the app's COEP `require-corp` header would enforce anyway
+  (§11.2).
 
 ## 10. Open items for design/build phase (not blocking, flagged for later)
 
@@ -566,3 +572,80 @@ exclusions so they aren't accidentally reintroduced during design:
 - Whether the OCR due-date flag also feeds the existing dashboard
   overdue banner, and whether it reuses the 14-day "upcoming" window
   already used elsewhere (§4/§8.1) or a different one (§8.13).
+- Whether the "watch & revise" links (§11.2) should resolve to a
+  specific lesson video via a build- or run-time lookup (e.g. the
+  YouTube Data API) instead of channel/search-page links. Deferred: it
+  would be the project's first third-party API dependency and its first
+  non-Supabase secret, so it needs a `principles.md` / `tech-stack.md`
+  sign-off before being built. The §11.2 data shape leaves room for a
+  resolved per-video URL to be added later without restructuring.
+
+---
+
+## 11. Topic detail pages
+
+Added 2026-09-10. Placed after the §9/§10 pass-scoped meta-sections to
+avoid renumbering existing `§9`/`§10` cross-references throughout the
+steering docs and code.
+
+Extends §2 (syllabus tracker) and §3 (resource hub): a topic's page
+becomes somewhere to _learn_ the topic, not only track it. Today
+`/topic/<id>` shows the condensed sub-topic checklist and a short
+curated link list; this adds the full specification content and a
+per-topic "watch & revise" section to the same page. No new route — the
+page that already exists is enriched, with the specification content
+collapsed by sub-section so it doesn't bury the checklist.
+
+### 11.1 Full specification detail
+
+- Each topic page shows the **complete AQA 7517 subject content** for
+  that spec section (4.1–4.13), structured to mirror the specification's
+  own numbered sub-sections (e.g. 4.4.1, 4.4.2, and their sub-points
+  where the spec nests them). This is the real spec detail, not a
+  paraphrase down to the checklist labels — the checklist item text in
+  §2 is the one-line summary, this is what it summarises.
+- `principles.md` §2 governs this content: it must trace to the actual
+  AQA specification. The source of record is
+  `reference/aqa-cs-7517-spec-content.md` (itself compiled from AQA's
+  own subject-content pages); the app must not re-scrape AQA at build or
+  run time.
+- Fixed, code-maintained content — same "content in code, not the
+  database" pattern as the §2 checklist, the §4 NEA sections and every
+  Unit 2 exercise. No schema, no authoring UI, no runtime markdown
+  rendering; it is typed data in `/lib/spec` checked by a structural
+  test.
+- Read-only reference material. It is **not** independently
+  status-tracked — the §2 checklist items remain the single unit a
+  status attaches to. Rendering the two side by side is deliberate: the
+  checklist stays the thing you act on, the spec detail is what you
+  consult.
+- Each sub-section is individually collapsible and collapsed by default,
+  so a long section (4.4, 4.7) doesn't push the checklist and resources
+  off the page.
+
+### 11.2 Watch & revise
+
+- Each topic page shows a **"watch & revise" section**: the video and
+  revision resources mapped to that spec area, from
+  `reference/aqa-cs-video-resources.md` (curated from the school's own
+  recommended list).
+- **Only channel- or site-level links, and clearly-labelled search
+  affordances** (e.g. "search Craig 'n' Dave for 4.4"). The app must
+  **never** present a fabricated deep link to a specific lesson video —
+  those are not verified and would 404 or point at the wrong video.
+  This is a hard rule carried directly from the reference file.
+- Laid out as **starting points**, visibly not "the 4.4.2 FSM video" —
+  the section says so in as many words.
+- Shown as a section **distinct from** the §3 curated resource list and
+  the §3 personal ("also saved") list. The three may overlap in the
+  sources they name; they are not merged.
+- Same content-in-code treatment as §11.1 — typed `/lib/spec` data, no
+  schema, no authoring UI.
+
+### 11.3 Status control unchanged
+
+- The existing per-subtopic status control
+  (`not-started`/`learning`/`practising`/`confident`, student-writable
+  only, §2) keeps working exactly as before from this view. Enriching
+  the page must not regress it, the supporter flags, the "last touched"
+  date, or the Realtime sync between the two accounts.

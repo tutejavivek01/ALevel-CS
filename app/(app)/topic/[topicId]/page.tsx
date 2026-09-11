@@ -1,8 +1,14 @@
 import { notFound } from 'next/navigation';
 import { Card } from '@/components/Card';
 import { TopicChecklist } from '@/components/TopicChecklist';
+import { TopicSpecDetail } from '@/components/TopicSpecDetail';
+import { TopicWatchResources } from '@/components/TopicWatchResources';
 import { PersonalResourceLinks } from '@/components/PersonalResourceLinks';
-import { getTopicById } from '@/lib/spec';
+import {
+  getTopicById,
+  getSpecContentForTopic,
+  getWatchResourcesForTopic,
+} from '@/lib/spec';
 
 export default async function TopicPage(props: PageProps<'/topic/[topicId]'>) {
   const { topicId } = await props.params;
@@ -11,6 +17,9 @@ export default async function TopicPage(props: PageProps<'/topic/[topicId]'>) {
   if (!topic) {
     notFound();
   }
+
+  const specContent = getSpecContentForTopic(topic);
+  const watchResources = getWatchResourcesForTopic(topic);
 
   return (
     <Card>
@@ -24,6 +33,9 @@ export default async function TopicPage(props: PageProps<'/topic/[topicId]'>) {
       </div>
 
       <TopicChecklist topicId={topic.id} items={topic.items} />
+
+      {specContent && <TopicSpecDetail content={specContent} />}
+      {watchResources && <TopicWatchResources resources={watchResources} />}
 
       <h3 className="section-title" style={{ marginTop: 20 }}>
         Resources

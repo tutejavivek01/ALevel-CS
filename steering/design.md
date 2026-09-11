@@ -457,8 +457,10 @@ worth a quick decision before build starts.
                                  banner (§6.11 - was the supporter-
                                  authored problems' due dates before
                                  §6.9), activity trail (§6)
-/topic/[topicId]                Checklist + curated & personal resources
-                                 + supporter flags
+/topic/[topicId]                Checklist + full AQA spec detail
+                                 (collapsible, per sub-section) + watch &
+                                 revise links + curated & personal
+                                 resources + supporter flags (§6.12)
 /nea                             Six-section tracker, notes log, deadline
                                  state, marks-worth-complete figure
 /practice/theory-of-computation  Trace tables, FSM step-tracer, glossary
@@ -915,6 +917,53 @@ overdue thresholds are unchanged (reuses `NEA_UPCOMING_WINDOW_DAYS`,
 §6.3) — resolving requirements.md §10's open question in favor of
 reusing the existing window rather than a new one.
 
+### 6.12 Topic detail pages (req. §11)
+
+The `/topic/[topicId]` page (server component) gains two sections
+between the `TopicChecklist` and the existing curated-resources block.
+No new route, no client component, no database work — this is pure
+content-in-code, the same running theme as §6.2 (curated links render
+straight from `/lib/spec`).
+
+**Spec detail content** — `lib/spec/spec-content.ts`, one hand-authored
+typed module, transcribed verbatim from
+`reference/aqa-cs-7517-spec-content.md` (§§4.1–4.13; 4.14 is the NEA and
+lives in `lib/spec/nea.ts`). Shape: `SPEC_CONTENT: TopicSpecContent[]`,
+one entry per topic keyed by `ref` (`'4.4'`, matching `Topic.ref`), each
+holding an ordered `sections: SpecSection[]` that mirrors the reference
+file's numbered headings — `{ ref: '4.4.2', title, detail?, points? }`,
+where `points` carries the sub-numbered items (4.1.1.1–16 etc.) where
+the spec nests them. `lib/spec/index.ts` exports
+`getSpecContentForTopic(topic)`.
+
+**Watch & revise content** — `lib/spec/watch-resources.ts`,
+`WATCH_RESOURCES: TopicWatchResources[]` keyed by `ref`, each a list of
+`{ name, url, kind: 'watch' | 'revise', hint? }`, transcribed from
+`reference/aqa-cs-video-resources.md`. Every `url` is a channel/site
+homepage or index page copied from that file; no `watch?v=` / `youtu.be`
+/ `/shorts/` URLs — a Vitest guard rejects them, backing
+requirements.md §11.2's hard rule.
+
+**Components** — `components/TopicSpecDetail.tsx` and
+`components/TopicWatchResources.tsx`, both server components (no hooks,
+no DB), rendered inline like the current `Resources` block. Spec
+sub-sections use a native `<details>`/`<summary>`, collapsed by default —
+no JS, server-rendered, keyboard-accessible. New headings are `<h3>`/
+`<h4>` and `<summary>` contents are `<span>`s, so the single-`<h2>`
+assumption in `tests/e2e/topics.spec.ts` still holds.
+
+**Untouched** — `TopicChecklist`, `StatusSegmentedControl`,
+`SupporterFlag`, the `subtopic_status*` tables and their hooks. The
+status control, flags, "last touched" date and Realtime sync are exactly
+as before; the enriched page adds sections around them, nothing more.
+
+**Referential integrity** — an extension to
+`__tests__/spec-integrity.test.ts`: `SPEC_CONTENT` and `WATCH_RESOURCES`
+each cover 4.1–4.13 in order; every `SpecSection.ref` starts with its
+topic's `ref`; every section has real content (a length floor guards
+against silently thinning it back to a label); the no-video-URL guard
+above.
+
 ## 7. Cross-cutting: save reliability pattern (principles.md §1)
 
 Every mutating hook in §4 follows the same shape so "never silently
@@ -943,7 +992,11 @@ Concrete targets, extending `conventions.md`'s general split:
   exists in `/lib/spec` (the referential-integrity check called out in
   §2.2, since the database can't enforce it); the same structural-validity
   check for the OCR challenge data module — unique ids, non-empty
-  descriptions, every declared test case has an expected output (§6.8).
+  descriptions, every declared test case has an expected output (§6.8);
+  the same for the topic spec-detail and watch/revise modules — every
+  topic 4.1–4.13 covered in order, every spec sub-section `ref` prefixed
+  by its topic's `ref`, a per-topic content-length floor, and no
+  fabricated specific-video URL among the watch/revise links (§6.12).
 - **Playwright**: student status change persists across reload and is
   visible on the supporter's session; a supporter's role cannot write a
   subtopic status even via direct interaction; an NEA note append doesn't
@@ -961,7 +1014,10 @@ Concrete targets, extending `conventions.md`'s general split:
   sessions; a supporter's per-version comment appears live without
   affecting the challenge-level `reviewed` status; either account can set
   a due date and the other sees it live; an overdue, un-reviewed
-  challenge shows the distinct flag and a reviewed one doesn't (§6.11).
+  challenge shows the distinct flag and a reviewed one doesn't (§6.11);
+  a topic page renders its spec detail (a known sub-section ref, its
+  text visible once expanded) and its watch & revise links, and the
+  per-subtopic status control still works on the enriched page (§6.12).
 
 ## 9. Design decisions made now, flagged for confirmation
 
@@ -1034,3 +1090,14 @@ silently decided:
     repurposed to read OCR due dates instead of (not alongside) the
     retired parent-authored ones. §6.11, resolves requirements.md §10's
     open questions.
+19. Topic spec-detail and watch/revise content are hand-authored typed
+    modules under `/lib/spec`, transcribed from the two `reference/*.md`
+    files — not a build-time codegen step (the repo has none) and not
+    runtime markdown rendering (no renderer dependency). It matches every
+    existing content-in-code module. §6.12, resolves requirements.md
+    §11's build-vs-runtime question.
+20. The spec detail is display-only reference content shown alongside the
+    §2 checklist, not a finer-grained thing to track — status stays
+    attached to the checklist items. A YouTube Data API lookup for
+    specific videos is left as a requirements.md §10 open item; v1 ships
+    channel/search links only. §6.12.

@@ -12,6 +12,19 @@ export {
   getNeaSectionById,
   type NeaSection,
 } from './nea';
+export {
+  SPEC_CONTENT,
+  getSpecContentForTopic,
+  type SpecPoint,
+  type SpecSection,
+  type TopicSpecContent,
+} from './spec-content';
+export {
+  WATCH_RESOURCES,
+  getWatchResourcesForTopic,
+  type WatchResource,
+  type TopicWatchResources,
+} from './watch-resources';
 
 import { TOPICS, type Topic } from './topics';
 
