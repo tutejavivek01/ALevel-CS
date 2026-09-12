@@ -54,6 +54,15 @@ seeding) exist specifically so later tasks don't have to reinvent them.
 - [x] 44. Topic spec-detail content module
 - [x] 45. Watch & revise content module
 - [x] 46. Topic detail pages: UI & sign-off
+- [x] 47. Mastery gate: schema + RLS
+- [x] 48. Mastery gate: quiz + programming-challenge content
+- [x] 49. Mastery gate: quiz/challenge UI + gate interception
+- [x] 50. Mastery gate: history modal
+- [x] 51. Exam question bank: schema + RLS + content module
+- [ ] 52. Exam question bank: AI marking route
+- [ ] 53. Exam question bank: topic-page UI
+- [ ] 54. Exam question bank: progress + confident-gate integration
+- [ ] 55. End-to-end polish & sign-off (mastery gate + exam question bank)
 
 ---
 
@@ -946,3 +955,169 @@ and watch & revise section; the status control, flags, "last touched"
 and Realtime sync are unregressed; requirements.md §11 all holds on the
 running app; lint, Vitest, a clean build and the full Playwright suite
 are green; and `steering/tasks.md` has 44–46 checked off.
+
+## 47. Mastery gate: schema + RLS
+
+Per `design.md` §6.13, requirements.md §12.
+
+- Migrations for `mastery_attempts` (student-only insert, open select, no
+  update/delete) and `mastery_attempt_items` (same split, FK cascade to
+  its parent).
+- Confirm the role split directly against the database with each seeded
+  account's session, same rigor as task 20/30: student can insert a
+  `mastery_attempts` row, supporter cannot; both can read it.
+
+**Done when:** those role-split checks pass against real sessions —
+schema-only, no UI yet.
+
+## 48. Mastery gate: quiz + programming-challenge content
+
+Per `design.md` §6.13, requirements.md §12.2/§12.3. Content-heavy, like
+tasks 34/44 — budget for authoring, not just the data shape.
+
+- `lib/exercises/mastery-quiz.ts`: `MasteryQuizQuestion` type,
+  `MASTERY_QUIZZES` — 10 hand-authored MC/short-answer questions per
+  quiz-route topic (every topic except `programming`, `data-structures`,
+  `algorithms`, `functional`), each citable against the real AQA spec
+  (`lib/spec/spec-content.ts`), graded by plain-logic accepted-answer
+  matching only.
+- `lib/exercises/mastery-challenges.ts`: `MasteryChallenge` type
+  (identical gradable shape to `OcrChallenge`), `MASTERY_CHALLENGES` — 2
+  hand-derived-and-verified challenges each for `programming`,
+  `data-structures`, `algorithms`, `functional`.
+- `MASTERY_QUIZ_TOPICS`/`MASTERY_CHALLENGE_TOPICS` route lists.
+- Vitest structural-integrity test: every topic covered by exactly one
+  route; every quiz-route topic has exactly 10 questions; every
+  challenge-route topic has exactly 2 challenges with real test cases;
+  unique ids throughout.
+
+**Done when:** the integrity test passes and a hand-derived challenge's
+own solution actually passes its own test case through the real Pyodide
+pipeline (no UI yet).
+
+## 49. Mastery gate: quiz/challenge UI + gate interception
+
+Per `design.md` §6.13, requirements.md §12.
+
+- `components/Modal.tsx`: reusable `<dialog>`-based modal, new CSS.
+- `lib/db/use-mastery-attempts.ts`: insert hook (attempt + items in one
+  mutation) and `useMasteryGateStatus(topicId)`.
+- `components/MasteryQuizFlow.tsx` and `MasteryChallengeFlow.tsx` (reusing
+  `PythonEditor`/`usePyodideWorker`/`gradeSubmission()` unchanged for the
+  challenge route).
+- `TopicChecklist.tsx`: intercept the `confident` transition when the
+  topic's gate hasn't been passed — open "Test knowledge" instead of
+  writing the status directly.
+- "Test knowledge" entry point on the topic page.
+
+**Done when:** a sub-80% quiz attempt is recorded but doesn't unlock
+Confident; an 80%+ attempt does; a challenge attempt needs both
+challenges passing; an already-Confident topic survives a later failed
+re-attempt; confirmed with Playwright.
+
+## 50. Mastery gate: history modal
+
+Per `design.md` §6.13, requirements.md §12.4/§12.6.
+
+- `components/MasteryGateHistory.tsx` + "History" entry point: every past
+  attempt (quiz or challenge) for the topic, newest first, per-item
+  detail (question/challenge, answer, correct/pass), visible to both
+  accounts.
+
+**Done when:** a failed attempt appears in history exactly like a passing
+one; the supporter can view it but has no way to attempt the gate
+herself.
+
+## 51. Exam question bank: schema + RLS + content module
+
+Per `specs/exam-question-bank/design.md` §1–§2, requirements.md §1.
+
+- Migration for `exam_question_attempts` — student-insert, **owner-scoped
+  update** (the one deliberate exception to this schema's append-only
+  attempt-table convention, documented as such), open select, no delete.
+- `lib/exercises/exam-question-bank.ts`: typed import of
+  `reference/aqa_cs_question_bank.json`, accounting for the appendices'
+  flat shape and parts with no `marks` key; `getExamChaptersForTopic`,
+  `getExamQuestionById`.
+- Vitest structural-integrity test: computed totals (177 questions, 789
+  marks, 73 `needsReview`) match the source file exactly; every chapter's
+  `specArea` resolves to a real topic.
+- Confirm the role split directly against the database: student can
+  insert and update their own row; cannot update another student's (n/a
+  today, single student — confirm the policy shape is still correct);
+  supporter can read but not insert.
+
+**Done when:** the integrity test passes and the role-split checks pass
+against real sessions — no UI, no marking yet.
+
+## 52. Exam question bank: AI marking route
+
+Per `specs/exam-question-bank/design.md` §3, requirements.md §4.
+
+- `app/api/exam-questions/mark/route.ts`: auth check, server-side question
+  lookup (never trust client-supplied question text), answer-dedup check,
+  insert-then-update two-phase write, Claude Opus 5 call via Structured
+  Outputs to the exact `{awarded, max, credited, missed, model_answer,
+  misconceptions, confidence}` contract, typed-exception failure handling.
+- `ANTHROPIC_API_KEY` added to `.env.example`; never read client-side.
+- A test-mode marking seam so Playwright can exercise submit → persist →
+  mark → display without a live API call (design.md §6).
+
+**Done when:** a mocked marking failure still leaves the answer persisted
+with a retryable status; an identical resubmitted answer doesn't trigger
+a second (mocked) marking call; a manual smoke test against the real API
+(once a real key is supplied) returns a schema-valid result for one real
+question.
+
+## 53. Exam question bank: topic-page UI
+
+Per `specs/exam-question-bank/design.md` §5, requirements.md §2/§3.
+
+- `components/ExamQuestionsSection.tsx`, `ExamChapterTabs.tsx`,
+  `ExamQuestionView.tsx`, `ExamAnswerForm.tsx` (per-part answer + submit,
+  `localStorage` autosave), `ExamAnswerResult.tsx` (pending/marked/
+  unmarkable/failed-with-retry states).
+- `needsReview` notice + source-page citation; `sourceExam` provenance;
+  mark-sized answer fields; honest lower-bound mark totals; Year 12/13
+  level filter defaulting to Year 12.
+
+**Done when:** a question is answered end-to-end (draft autosaves,
+submit persists then marks, result displays); a `needsReview` question is
+attemptable with its notice visible; the level filter hides Year 13 by
+default.
+
+## 54. Exam question bank: progress + confident-gate integration
+
+Per `specs/exam-question-bank/design.md` §4, requirements.md §5.
+
+- `lib/exercises/exam-question-progress.ts`: `computeTopicExamProgress`,
+  `computeExamGateStatus` (≥50% mark-coverage AND ≥70% mark-quality,
+  latest attempt per part only, excluding unmarkable/failed).
+- Wire `computeExamGateStatus` into `useMasteryGateStatus` (design.md
+  §6.13) as an alternative pass condition alongside the quiz/challenge
+  routes.
+- Unify `MasteryGateHistory` (task 50) to also show exam-question
+  attempts, merged by timestamp.
+
+**Done when:** a Vitest suite covers the 50%/70% boundary conditions
+directly; reaching the threshold unlocks Confident exactly like the other
+two routes; history shows all three attempt kinds together.
+
+## 55. End-to-end polish & sign-off (mastery gate + exam question bank)
+
+Per `design.md` §8, mirrors tasks 29/37/42/46 for this round.
+
+- Walk requirements.md §12 and `specs/exam-question-bank/requirements.md`
+  top to bottom against the running app.
+- Full Playwright coverage across both features' flows (tasks 49/50/53/54
+  each already listed their own "Done when" — this confirms them together,
+  not in isolation).
+- Confirm requirements.md §10's still-open item (whether `computation`/
+  `data-representation`/`databases` belong on the programming-challenge
+  route) is either resolved or still explicitly flagged, not silently
+  forgotten.
+- Run the full verification suite: lint, Vitest, a clean production
+  build, and the full Playwright suite.
+
+**Done when:** all of the above hold, and `steering/tasks.md` reflects
+every task in this list checked off.

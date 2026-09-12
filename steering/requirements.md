@@ -536,6 +536,10 @@ exclusions so they aren't accidentally reintroduced during design:
 - No embedded video players on topic detail pages — outbound links only,
   which the app's COEP `require-corp` header would enforce anyway
   (§11.2).
+- No cooldown or attempt-limit on the mastery gate (§12.5) — this is a
+  private, single-student tool, not a proctored assessment.
+- No database-level trigger enforcing the mastery gate — it is a
+  client-side, self-honesty feature, not a role boundary (§12.5).
 
 ## 10. Open items for design/build phase (not blocking, flagged for later)
 
@@ -575,10 +579,17 @@ exclusions so they aren't accidentally reintroduced during design:
 - Whether the "watch & revise" links (§11.2) should resolve to a
   specific lesson video via a build- or run-time lookup (e.g. the
   YouTube Data API) instead of channel/search-page links. Deferred: it
-  would be the project's first third-party API dependency and its first
-  non-Supabase secret, so it needs a `principles.md` / `tech-stack.md`
-  sign-off before being built. The §11.2 data shape leaves room for a
+  would need its own `principles.md` / `tech-stack.md` sign-off before
+  being built, the same as any new third-party dependency. (Note: §12's
+  sibling exam-question-bank spec separately introduces this app's first
+  deliberate third-party API dependency, for AI marking specifically —
+  that doesn't change the reasoning here, which is about an unrelated,
+  narrower video-lookup use case.) The §11.2 data shape leaves room for a
   resolved per-video URL to be added later without restructuring.
+- Which of `computation` (4.4), `data-representation` (4.5), and
+  `databases` (4.10) belong on the programming-challenge route rather
+  than the quiz route (§12.3) — not yet decided; needs a look at the full
+  spec content (§11.1) rather than the checklist labels alone.
 
 ---
 
@@ -649,3 +660,116 @@ collapsed by sub-section so it doesn't bury the checklist.
   only, §2) keeps working exactly as before from this view. Enriching
   the page must not regress it, the supporter flags, the "last touched"
   date, or the Realtime sync between the two accounts.
+
+## 12. "Confident" mastery gate
+
+Added 2026-09-12. Extends §2: a student can no longer set a sub-topic
+straight to `confident` by clicking a button. She must first demonstrate
+it, through one of the routes below. This is deliberately a minimal,
+mechanism-first spec — the exam-question route in
+`specs/exam-question-bank/requirements.md` is a sibling document that adds
+a *third* route through the same gate and entry points described here;
+read this section first.
+
+### 12.1 Gate scope
+
+- The gate operates **per topic** (13 gates, one per `4.1`–`4.13`), not per
+  checklist item. Across all 13 topics there are 95 checklist items total
+  (e.g. 4.1 alone has 10) — a per-item gate would mean up to ~950 authored
+  questions, which is not the intent.
+- Passing a topic's gate once unlocks the `confident` option for every
+  checklist item in that topic going forward — the student then uses the
+  existing per-item status control (§2) freely within that topic, with no
+  further re-testing per item.
+- **Grandfathering**: a sub-topic already marked `confident` before this
+  feature ships keeps that status untouched. The gate applies only to
+  future `not-confident → confident` transitions, consistent with §2's "no
+  automatic decay" principle — nothing about this feature retroactively
+  downgrades existing self-assessment.
+
+### 12.2 Quiz route (default)
+
+- For topics not on the programming-challenge route (§12.3), passing the
+  gate means scoring **at least 80% (8/10)** on a 10-question quiz for that
+  topic.
+- Questions are **multiple-choice or short-answer, graded by plain logic**
+  only (exact match / a small accepted-answer set / numeric tolerance where
+  relevant) — the same "checked against a real computed answer" standard
+  already used for trace-table and FSM exercises (principles.md §3), not an
+  AI grader. This keeps the gate deterministic and free of any external
+  dependency.
+- Questions are a **curated, hand-authored bank** — content-in-code under
+  `/lib/exercises`, following the same content-accuracy workflow as
+  `ocr-challenges.ts`. They may be AI-drafted offline as a starting point,
+  but every question is human-verified against the real AQA spec before it
+  ships; authoring the bank is separate follow-up content work, not part of
+  building the gate mechanism itself.
+
+### 12.3 Programming-challenge route
+
+- For topics whose content is naturally demonstrated by writing a program,
+  passing the gate means **passing 2 programming challenges** (both must
+  pass, not 1 of 2) instead of the quiz.
+- Confirmed on this route: `programming` (4.1), `data-structures` (4.2),
+  `algorithms` (4.3), `functional` (4.12) — this is literally the domain
+  `OCR_CHALLENGES` already draws from.
+- **Not yet decided — flagged in §10**: whether `computation` (4.4),
+  `data-representation` (4.5), and `databases` (4.10) also belong on this
+  route (each has a plausible code-evaluable angle — regular-expression
+  matching, base conversions, real SQL against Pyodide's bundled
+  `sqlite3` — but the checklist labels alone aren't a confident basis for
+  the call). Every topic not listed here stays on the quiz route.
+- Challenges execute via the **existing Pyodide pipeline unchanged** —
+  same Web Worker, timeout/interrupt handling, and `gradeSubmission()`/
+  exact-output-match grading already used for OCR challenges (§8.8). No new
+  execution infrastructure; only new challenge content (2 per
+  programming-challenge topic), same `{description, testCases}` shape as
+  an `OcrChallenge`.
+
+### 12.4 Attempt history
+
+- Every attempt — quiz or programming-challenge, pass or fail — is
+  **permanently recorded**: which questions/challenges were given, what
+  was answered/submitted, the score, pass/fail, and a timestamp. Nothing is
+  discarded, including failures, mirroring §8.5's "every submission stored,
+  never overwritten" principle.
+- New dedicated tables (not an extension of `subtopic_status_history`,
+  whose one-row-per-real-status-change invariant a failed attempt would
+  break) — one row per attempt plus one row per question/challenge within
+  it, following the exact append-only, student-insert/open-read pattern
+  already used for `ocr_challenge_submissions`/`ocr_challenge_submission_
+  results`. The supporter can read this history (§1: roles constrain
+  writes, not visibility) but never attempts the gate herself — only the
+  student's own self-assessment is gated.
+
+### 12.5 Retry and enforcement
+
+- **Immediate retry, no cooldown.** This is a private, single-student tool,
+  not a proctored exam — a failed attempt is recorded (§12.4) and the
+  student may try again right away.
+- A failed re-attempt **never revokes** an already-`confident` status from
+  an earlier pass (§12.1's grandfathering rule applies just as much to a
+  status earned five minutes ago as to one from before this feature
+  shipped) — status only ever moves when the student explicitly changes it
+  via the normal control.
+- The gate is enforced **client-side**, at the point the status control
+  would otherwise call the existing `subtopic_status` mutation directly —
+  consistent with this app's existing trust model, not a new one: the
+  `subtopic_status` RLS policy already permits only the student role to
+  write it at all, so there is no *other role* for a database-level guard
+  trigger to stop (unlike e.g. `guard_ocr_challenge_review_state_
+  supporter_write`, which exists specifically to stop the supporter role
+  from touching a column). A stronger DB-level guarantee is flagged as an
+  open item in §10 if this turns out to be worth revisiting.
+
+### 12.6 Entry points
+
+- Each topic page gets two new links alongside the existing checklist:
+  **"Test knowledge"** (opens the quiz/challenge flow) and **"History"**
+  (opens past attempts for that topic) — each opens in a pop-up/modal
+  window, not a page navigation. There is no existing modal/dialog
+  pattern anywhere in this app; this is new, reusable UI, not an
+  extension of an existing component.
+- "Test knowledge" is only meaningful for the student (only she can ever
+  move a status to `confident`); the supporter's view shows "History" but
+  has no reason to take the quiz/challenges herself.

@@ -65,6 +65,8 @@ erDiagram
     profiles ||--o{ ocr_challenge_version_comments : comments
     ocr_challenge_submissions ||--o{ ocr_challenge_submission_results : has
     ocr_challenge_code_versions ||--o{ ocr_challenge_version_comments : has
+    profiles ||--o{ mastery_attempts : attempts
+    mastery_attempts ||--o{ mastery_attempt_items : has
 ```
 
 (`ocr_challenge_review_state` and its `ocr_challenge_code_versions`/
@@ -314,6 +316,31 @@ ocr_challenge_version_comments (
   created_at   timestamptz not null default now()
 )
 
+-- One row per "confident" mastery-gate attempt, quiz or challenge (§6.13,
+-- requirements.md §12). topic_id is a code-defined slug from /lib/spec -
+-- not a foreign key, same convention as subtopic_id/challenge_id/term_id.
+mastery_attempts (
+  id           bigserial primary key,
+  topic_id     text not null,
+  route        text not null check (route in ('quiz','challenge')),
+  score        int not null,
+  max_score    int not null,
+  passed       boolean not null,
+  attempted_by uuid not null references profiles(id),
+  created_at   timestamptz not null default now()
+)
+
+-- One row per question/challenge within a mastery_attempts row.
+-- item_ref is a code-defined question/challenge id, not a foreign key.
+mastery_attempt_items (
+  id           bigserial primary key,
+  attempt_id   bigint not null references mastery_attempts(id) on delete cascade,
+  item_ref     text not null,
+  position     int not null,
+  answer       text not null,
+  correct      boolean not null
+)
+
 -- Activity trail (§6). Populated by application code alongside each
 -- mutation above (see §7.7), not by database triggers.
 activity_events (
@@ -460,7 +487,9 @@ worth a quick decision before build starts.
 /topic/[topicId]                Checklist + full AQA spec detail
                                  (collapsible, per sub-section) + watch &
                                  revise links + curated & personal
-                                 resources + supporter flags (§6.12)
+                                 resources + supporter flags (§6.12) +
+                                 "Test knowledge"/"History" mastery-gate
+                                 entry points (modals, §6.13)
 /nea                             Six-section tracker, notes log, deadline
                                  state, marks-worth-complete figure
 /practice/theory-of-computation  Trace tables, FSM step-tracer, glossary
@@ -964,6 +993,146 @@ topic's `ref`; every section has real content (a length floor guards
 against silently thinning it back to a label); the no-video-URL guard
 above.
 
+### 6.13 "Confident" mastery gate (req. §12)
+
+Per-topic gate (13 gates, §12.1), two routes today; §12's sibling document
+(`specs/exam-question-bank/design.md`) adds a third against the same
+schema and entry points.
+
+**Schema** — two new tables, following the exact append-only,
+insert-only-RLS, `text`-id-not-FK pattern already used for
+`ocr_challenge_submissions`/`_submission_results`:
+
+```sql
+-- One row per gate attempt (quiz or challenge), whichever topic/route it
+-- was. topic_id is a code-defined slug from /lib/spec (Topic.id) - not a
+-- foreign key, same convention as subtopic_id/challenge_id/term_id.
+mastery_attempts (
+  id           bigserial primary key,
+  topic_id     text not null,
+  route        text not null check (route in ('quiz','challenge')),
+  score        int not null,       -- questions correct, or challenges passed
+  max_score    int not null,       -- 10 for quiz, 2 for challenge
+  passed       boolean not null,   -- score/max_score meets the route's bar
+  attempted_by uuid not null references profiles(id),
+  created_at   timestamptz not null default now()
+)
+
+-- One row per question/challenge within an attempt. item_ref is the
+-- code-defined question/challenge id from lib/exercises - not a foreign
+-- key, integrity checked by a Vitest test like every other code-defined
+-- content id in this schema.
+mastery_attempt_items (
+  id           bigserial primary key,
+  attempt_id   bigint not null references mastery_attempts(id) on delete cascade,
+  item_ref     text not null,
+  position     int not null,
+  answer       text not null,      -- the submitted MC/short answer, or code
+  correct      boolean not null,   -- pass/fail for this one item
+)
+```
+
+RLS: `is_role('student')` gates insert on both tables (only the student
+attempts the gate, per §12.4); select is open to both roles (the supporter
+reads history but never attempts). No update/delete policy on either
+table — attempts are permanent, matching every other attempt-history table
+in this schema.
+
+**Content — two new hand-authored modules under `/lib/exercises`**,
+content-in-code like every other exercise type:
+
+- `mastery-quiz.ts` — `MASTERY_QUIZZES: Record<topicId, MasteryQuizQuestion[]>`,
+  10 questions per quiz-route topic. `MasteryQuizQuestion = { id, prompt,
+  options?: string[], accept: string[] }` (`accept` is the small
+  case/whitespace-insensitive accepted-answer set for a short-answer
+  question, or the single correct option's text for MC — one shape covers
+  both, matching requirements.md §12.2's "MC or short-answer, plain-logic
+  grading" in one type rather than two). **This is a new interface, not a
+  reuse of `SteppedExercise`** — that type is shaped around a sequence of
+  named fields checked per-cell (trace tables, FSM traces); a single-answer
+  quiz question doesn't fit it, and requirements.md §5.5 is explicit that
+  the shared interface was generalized only as far as trace-tables/FSM
+  already needed. Reuses only the *pattern* (content-in-code, an
+  `exactMatch`-style comparator) and `lib/exercises/python-output.ts`'s
+  `outputsMatch`-style trim-before-compare habit, applied to `accept`.
+- `mastery-challenges.ts` — `MASTERY_CHALLENGES: Record<topicId,
+  MasteryChallenge[]>`, exactly 2 per programming-challenge-route topic.
+  `MasteryChallenge = { id, title, description, testCases: {input,
+  expectedOutput}[] }` — the identical shape to `OcrChallenge`'s gradable
+  subset, so `gradeSubmission()` (`lib/python/grade-submission.ts`) and
+  the existing Pyodide worker/protocol run **completely unchanged**; no
+  new execution infrastructure of any kind.
+- Route lists live here too, not duplicated in requirements.md:
+  `MASTERY_QUIZ_TOPICS` / `MASTERY_CHALLENGE_TOPICS` (initially
+  `['programming','data-structures','algorithms','functional']` per
+  requirements.md §12.3 — `computation`/`data-representation`/`databases`
+  stay on the quiz list until/unless requirements.md §10's open item is
+  resolved).
+
+**Gate interception** — `TopicChecklist.tsx`'s `StatusSegmentedControl
+onChange` handler gains one branch: when the target status is `confident`
+and `useMasteryGateStatus(topicId)` reports the topic hasn't passed
+(neither a passing `mastery_attempts` row nor — once shipped — the
+exam-question threshold from the sibling spec), the click opens the "Test
+knowledge" modal instead of calling `useSetSubtopicStatus.mutate(...)`
+directly. Once a passing attempt exists for the topic, every checklist
+item in it behaves exactly as before — passing the gate doesn't set any
+item's status itself, it just unblocks the existing control.
+
+**`useMasteryGateStatus(topicId)`** (`lib/db/use-mastery-gate.ts`) —
+`useQuery` over `mastery_attempts where topic_id = :id and passed = true`
+(any row is enough; `limit 1`), plus (once the exam-question-bank ships)
+a call into its own threshold check. Subscribes via `useRealtimeTables`
+like every other status-bearing hook.
+
+**Components** (all new — confirmed zero modal/dialog precedent
+anywhere in this app):
+- `components/Modal.tsx` — a small reusable wrapper around the native
+  `<dialog>` element (`showModal()`/`close()`, native focus-trap and
+  Escape-to-close, no library dependency), styled with new CSS (backdrop,
+  centered panel reusing `Card`'s visual language — border/radius/shadow
+  tokens, not a third look). Used for **both** "Test knowledge" and
+  "History" (§12.6); the exam-question-bank's own UI is inline on the
+  page, not a modal (see its own design doc).
+- `components/MasteryQuizFlow.tsx` — renders `MASTERY_QUIZZES[topicId]`
+  inside the modal, one question at a time or as one scrollable form
+  (design-time choice, not critical); on submit, grades every question
+  client-side against `accept`, computes score, inserts one
+  `mastery_attempts` row (`route: 'quiz'`) + 10 `mastery_attempt_items`
+  rows in the same mutation, `passed = score >= 8`.
+- `components/MasteryChallengeFlow.tsx` — reuses `PythonEditor` +
+  `usePyodideWorker` + `gradeSubmission()` for the topic's 2
+  `MASTERY_CHALLENGES`; both must reach `overallResult === 'pass'` before
+  the attempt records `passed: true`. Failing either still records the
+  attempt (both items, whichever passed and whichever didn't).
+- `components/MasteryGateHistory.tsx` — inside the "History" modal;
+  queries `mastery_attempts` (+ items) for the topic, newest first, and
+  (once the sibling spec ships) merges in `exam_question_attempts` by
+  timestamp into one combined list — requirements.md §12.6/§5.3's "one
+  place to see every kind of attempt," not three separate views.
+
+**Enforcement is client-side, deliberately** — requirements.md §12.5
+explains why a DB trigger (the `guard_ocr_challenge_review_state_
+supporter_write`-style tool this schema already has for *role* boundaries)
+doesn't apply here: `subtopic_status`'s RLS already permits only the
+student role to write it at all, so there is no other role for a trigger
+to stop. The gate is a self-honesty UX feature layered on top of an
+already-role-correct table, not a new security boundary.
+
+**Testing**:
+- Vitest: a structural-integrity test for `MASTERY_QUIZZES`/
+  `MASTERY_CHALLENGES` (every quiz-route topic has exactly 10 questions,
+  every challenge-route topic has exactly 2 challenges with real test
+  cases, unique ids) mirroring `__tests__/ocr-challenges.test.ts`; the
+  MC/short-answer grading comparator itself (case/whitespace-insensitive
+  accepted-set matching).
+- Playwright: a quiz attempt below 80% doesn't unlock `confident` and is
+  still recorded in history; a quiz attempt at/above 80% does unlock it;
+  a challenge attempt needs both challenges passing, not one; a topic
+  already `confident` before an attempt stays `confident` regardless of
+  a later failed re-attempt (requirements.md §12.5); the modal opens
+  instead of an immediate status write when the gate hasn't been passed.
+
 ## 7. Cross-cutting: save reliability pattern (principles.md §1)
 
 Every mutating hook in §4 follows the same shape so "never silently
@@ -1017,7 +1186,12 @@ Concrete targets, extending `conventions.md`'s general split:
   challenge shows the distinct flag and a reviewed one doesn't (§6.11);
   a topic page renders its spec detail (a known sub-section ref, its
   text visible once expanded) and its watch & revise links, and the
-  per-subtopic status control still works on the enriched page (§6.12).
+  per-subtopic status control still works on the enriched page (§6.12);
+  a sub-80% quiz attempt doesn't unlock Confident and is recorded in
+  history regardless, an at/above-80% attempt does unlock it, a
+  programming-challenge attempt needs both challenges passing, and an
+  already-Confident topic survives a later failed re-attempt unchanged
+  (§6.13).
 
 ## 9. Design decisions made now, flagged for confirmation
 
@@ -1101,3 +1275,22 @@ silently decided:
     attached to the checklist items. A YouTube Data API lookup for
     specific videos is left as a requirements.md §10 open item; v1 ships
     channel/search links only. §6.12.
+21. The mastery-quiz question type is a new interface
+    (`MasteryQuizQuestion`), not a reuse of `SteppedExercise` — that type
+    is shaped around a checked sequence of named fields (trace tables,
+    FSM traces), not a single-answer quiz item. §6.13, resolves
+    requirements.md §5.5's "generalize only as far as already needed"
+    concern in the other direction: don't force-fit a new shape into it
+    either.
+22. Programming-challenge content reuses `OcrChallenge`'s exact
+    `{description, testCases}` shape and the unmodified Pyodide execution
+    pipeline (`gradeSubmission()`, the worker, the timeout/interrupt
+    machinery) — zero new execution infrastructure for the mastery gate's
+    challenge route. §6.13.
+23. The mastery gate is enforced client-side, not by a new DB trigger —
+    `subtopic_status` RLS already restricts writes to the student role
+    alone, so there is no other role for a trigger to guard against; the
+    existing column-scoping-trigger pattern (`guard_ocr_challenge_review_
+    state_supporter_write`) solves a different problem (co-owned columns
+    across roles) than this one (a single role's own self-honesty check).
+    §6.13, resolves requirements.md §12.5.
