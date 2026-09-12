@@ -26,6 +26,9 @@ const EXPORTED_TABLES = [
   'ocr_challenge_reviews',
   'ocr_challenge_code_versions',
   'ocr_challenge_version_comments',
+  'mastery_attempts',
+  'mastery_attempt_items',
+  'exam_question_attempts',
   'activity_events',
 ] as const;
 

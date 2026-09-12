@@ -33,6 +33,40 @@ function checkRow(page: import('@playwright/test').Page, label: string) {
 test('student can change a status and it persists across reload', async ({
   browser,
 }) => {
+  // `programming` is on the mastery gate's programming-challenge route
+  // (design.md §6.13) - clicking Confident directly no longer works
+  // until that topic's gate has been passed at least once. Seed a
+  // passing attempt so this test can keep exercising the plain
+  // status/reload mechanism it actually cares about, not the gate
+  // itself (which mastery-gate.spec.ts covers). Previously this test
+  // happened to pass only because programming__0 already had a stale
+  // 'confident' status left over from before the gate existed - fixed
+  // to not depend on that.
+  const admin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  );
+  const studentAuth = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+  await studentAuth.auth.signInWithPassword({
+    email: process.env.E2E_STUDENT_EMAIL!,
+    password: process.env.E2E_STUDENT_PASSWORD!,
+  });
+  const {
+    data: { user: studentUser },
+  } = await studentAuth.auth.getUser();
+  await admin.from('mastery_attempts').insert({
+    topic_id: 'programming',
+    route: 'challenge',
+    score: 2,
+    max_score: 2,
+    passed: true,
+    attempted_by: studentUser!.id,
+  });
+
   const { context, page } = await loginAs(
     browser,
     process.env.E2E_STUDENT_EMAIL!,
@@ -42,13 +76,18 @@ test('student can change a status and it persists across reload', async ({
   const row = checkRow(page, RELOAD_TEST_ITEM_LABEL);
 
   await row.getByRole('button', { name: 'Confident' }).click();
-  await expect(row.getByRole('button', { name: 'Confident' })).toHaveClass(/on/);
+  await expect(row.getByRole('button', { name: 'Confident' })).toHaveClass(
+    /on/
+  );
 
   await page.reload();
   await expect(
-    checkRow(page, RELOAD_TEST_ITEM_LABEL).getByRole('button', { name: 'Confident' })
+    checkRow(page, RELOAD_TEST_ITEM_LABEL).getByRole('button', {
+      name: 'Confident',
+    })
   ).toHaveClass(/on/);
 
+  await admin.from('mastery_attempts').delete().eq('topic_id', 'programming');
   await context.close();
 });
 
@@ -100,9 +139,9 @@ test('a status change from one account appears live in the other, without reload
   const supporterRow = checkRow(supporter.page, REALTIME_TEST_ITEM_LABEL);
 
   await studentRow.getByRole('button', { name: 'Learning' }).click();
-  await expect(studentRow.getByRole('button', { name: 'Learning' })).toHaveClass(
-    /on/
-  );
+  await expect(
+    studentRow.getByRole('button', { name: 'Learning' })
+  ).toHaveClass(/on/);
 
   // Supporter never touched anything - should see the student's change live.
   await expect(

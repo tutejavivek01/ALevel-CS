@@ -5,7 +5,9 @@ import { createClient } from '@supabase/supabase-js';
 
 config({ path: path.join(process.cwd(), '.env.local'), quiet: true });
 
-test('an unauthenticated request to /export redirects to /login', async ({ page }) => {
+test('an unauthenticated request to /export redirects to /login', async ({
+  page,
+}) => {
   const response = await page.goto('/export');
   expect(response?.url()).toContain('/login');
 });
@@ -44,6 +46,9 @@ test('the export contains every table, with counts matching the database directl
     'ocr_challenge_reviews',
     'ocr_challenge_code_versions',
     'ocr_challenge_version_comments',
+    'mastery_attempts',
+    'mastery_attempt_items',
+    'exam_question_attempts',
     'activity_events',
   ];
   for (const table of expectedTables) {
@@ -64,20 +69,23 @@ test('the export contains every table, with counts matching the database directl
     'python_problems',
     'ocr_challenge_code_versions',
   ]) {
-    const { count } = await admin.from(table).select('*', { count: 'exact', head: true });
+    const { count } = await admin
+      .from(table)
+      .select('*', { count: 'exact', head: true });
     expect(body[table].length).toBe(count);
   }
 });
 
-test('the "Download my data" link is reachable from the dashboard', async ({ page }) => {
+test('the "Download my data" link is reachable from the dashboard', async ({
+  page,
+}) => {
   await page.goto('/login');
   await page.getByLabel('Email').fill(process.env.E2E_STUDENT_EMAIL!);
   await page.getByLabel('Password').fill(process.env.E2E_STUDENT_PASSWORD!);
   await page.getByRole('button', { name: 'Sign in' }).click();
   await page.waitForURL('/');
 
-  await expect(page.getByRole('link', { name: 'Download my data' })).toHaveAttribute(
-    'href',
-    '/export'
-  );
+  await expect(
+    page.getByRole('link', { name: 'Download my data' })
+  ).toHaveAttribute('href', '/export');
 });
