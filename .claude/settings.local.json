@@ -22,7 +22,18 @@
       "Bash(powershell -NoProfile -Command \"Stop-Process -Id 18632,42480 -Force -ErrorAction SilentlyContinue; Start-Sleep -Seconds 1; Get-Process -Name node -ErrorAction SilentlyContinue | Select-Object Id, StartTime\")",
       "Bash(powershell -NoProfile -Command \"try { Get-Process -Name node -ErrorAction Stop | Select-Object Id, StartTime } catch { Write-Output 'no node processes' }\")",
       "Bash(powershell -NoProfile -Command \"try { Get-Process -Name node -ErrorAction Stop | Stop-Process -Force } catch {}\")",
-      "Bash(rm -rf .next)"
+      "Bash(rm -rf .next)",
+      "Bash(npx vitest *)",
+      "Bash(grep -B2 \"^C:\\\\\\\\\\\\\\\\Users\")",
+      "Bash(netstat -ano)",
+      "Bash(npx tsc *)",
+      "Bash(taskkill //PID 45696 //F)",
+      "Bash(taskkill //PID 46980 //F)",
+      "Bash(grep -o \"function ae\\([^\\)]*\\)[^;]\\\\{0,300\\\\}\" node_modules/pyodide/pyodide.mjs)",
+      "Bash(taskkill //PID 45164 //F)",
+      "Bash(taskkill //PID 4436 //F)",
+      "Bash(tasklist //FI \"IMAGENAME eq node.exe\")",
+      "Bash(taskkill //PID 31904 //F)"
     ]
   }
 }

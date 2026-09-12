@@ -66,4 +66,27 @@ describe('exam question bank (EXAM_CHAPTERS)', () => {
       .filter((p) => p.marks === undefined);
     expect(partsWithNoMarks.length).toBeGreaterThan(0);
   });
+
+  test('every part has a unique partKey within its own question, even when the source repeats a display label', () => {
+    // A real OCR-extraction quirk in the source bank: some questions
+    // (e.g. ch8-q1) literally repeat a part label ("i", "i") rather than
+    // numbering "i", "ii". partKey must disambiguate these so React keys,
+    // the DB `part` column, and attempt lookups never collide.
+    let sawARepeatedLabel = false;
+    for (const chapter of EXAM_CHAPTERS) {
+      for (const question of chapter.questions) {
+        if (!question.parts) continue;
+        const labels = question.parts.map((p) => p.part);
+        if (new Set(labels).size !== labels.length) sawARepeatedLabel = true;
+        const keys = question.parts.map((p) => p.partKey);
+        expect(new Set(keys).size, question.id).toBe(keys.length);
+      }
+    }
+    expect(sawARepeatedLabel).toBe(true);
+  });
+
+  test('ch8-q1 (a known repeated-label case) disambiguates "i" into "i-1"/"i-2"', () => {
+    const question = getExamQuestionById('ch8-q1');
+    expect(question?.parts?.map((p) => p.partKey)).toEqual(['i-1', 'i-2']);
+  });
 });

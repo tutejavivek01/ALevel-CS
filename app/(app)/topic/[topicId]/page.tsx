@@ -3,6 +3,7 @@ import { Card } from '@/components/Card';
 import { TopicChecklist } from '@/components/TopicChecklist';
 import { TopicSpecDetail } from '@/components/TopicSpecDetail';
 import { TopicWatchResources } from '@/components/TopicWatchResources';
+import { ExamQuestionsSection } from '@/components/ExamQuestionsSection';
 import { PersonalResourceLinks } from '@/components/PersonalResourceLinks';
 import {
   getTopicById,
@@ -32,9 +33,14 @@ export default async function TopicPage(props: PageProps<'/topic/[topicId]'>) {
         </div>
       </div>
 
-      <TopicChecklist topicId={topic.id} items={topic.items} />
+      <TopicChecklist
+        topicId={topic.id}
+        topicRef={topic.ref}
+        items={topic.items}
+      />
 
       {specContent && <TopicSpecDetail content={specContent} />}
+      <ExamQuestionsSection topicRef={topic.ref} />
       {watchResources && <TopicWatchResources resources={watchResources} />}
 
       <h3 className="section-title" style={{ marginTop: 20 }}>

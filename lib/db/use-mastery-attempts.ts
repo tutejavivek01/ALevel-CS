@@ -3,6 +3,13 @@
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { createClient } from './supabase-browser';
 import { useRealtimeTables } from './use-realtime-tables';
+import { getTopicById } from '@/lib/spec';
+import { getExamChaptersForTopic } from '@/lib/exercises/exam-question-bank';
+import { computeExamGateStatus } from '@/lib/exercises/exam-question-progress';
+import {
+  latestAttemptsByPart,
+  useExamQuestionAttempts,
+} from './use-exam-question-attempts';
 
 // The "confident" mastery gate (design.md §6.13, requirements.md §12).
 // Every attempt - quiz or programming-challenge, pass or fail - is a
@@ -63,15 +70,36 @@ export function useMasteryAttempts(topicId: string) {
   return query;
 }
 
-// Whether the topic's gate has ever been passed - any one passing
-// attempt (quiz or challenge) is enough, and it stays passed even if a
-// later re-attempt fails (requirements.md §12.5's no-auto-revoke rule -
-// this hook never re-derives "passed" from the *latest* attempt, only
-// from whether one exists at all).
+// Whether the topic's gate has ever been passed - any one of the three
+// routes is enough (requirements.md §5.2/§12.1: quiz, programming
+// challenge, or the exam-question threshold - not additive). For the
+// quiz/challenge routes this is "any one passing attempt exists" and
+// stays true even if a later re-attempt fails (requirements.md §12.5's
+// no-auto-revoke rule). The exam-question route is different in kind -
+// it's a live threshold over cumulative attempts (requirements.md §5.2),
+// not a single pass/fail event, so it's recomputed from current data
+// each time rather than stored as its own "passed" flag.
 export function useMasteryGateStatus(topicId: string) {
-  const { data: attempts, isLoading } = useMasteryAttempts(topicId);
-  const passed = (attempts ?? []).some((attempt) => attempt.passed);
-  return { passed, isLoading };
+  const { data: attempts, isLoading: attemptsLoading } =
+    useMasteryAttempts(topicId);
+  const topic = getTopicById(topicId);
+  const { data: examAttempts, isLoading: examLoading } =
+    useExamQuestionAttempts(topic?.ref ?? '');
+
+  const passedQuizOrChallenge = (attempts ?? []).some(
+    (attempt) => attempt.passed
+  );
+  const passedExamQuestions = topic
+    ? computeExamGateStatus(
+        getExamChaptersForTopic(topic.ref),
+        latestAttemptsByPart(examAttempts ?? [])
+      ).passed
+    : false;
+
+  return {
+    passed: passedQuizOrChallenge || passedExamQuestions,
+    isLoading: attemptsLoading || examLoading,
+  };
 }
 
 type SubmitItem = {

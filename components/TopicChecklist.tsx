@@ -37,9 +37,11 @@ const REALTIME_TABLES = [
 
 export function TopicChecklist({
   topicId,
+  topicRef,
   items,
 }: {
   topicId: string;
+  topicRef: string;
   items: string[];
 }) {
   const queryClient = useQueryClient();
@@ -195,7 +197,7 @@ export function TopicChecklist({
         onClose={() => setHistoryModalOpen(false)}
         title="History"
       >
-        <MasteryGateHistory topicId={topicId} />
+        <MasteryGateHistory topicId={topicId} topicRef={topicRef} />
       </Modal>
     </>
   );

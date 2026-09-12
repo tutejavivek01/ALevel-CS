@@ -15,7 +15,12 @@
 import raw from '../../reference/aqa_cs_question_bank.json';
 
 export type ExamQuestionPart = {
-  part: string;
+  part: string; // display label, e.g. "i" - not always unique within a question, see partKey
+  partKey: string; // stable, collision-free identity: same as `part` unless the
+  // source repeats a label within one question (a real OCR-extraction
+  // quirk - e.g. ch8-q1's two parts are both literally labelled "i"),
+  // in which case every occurrence of that label is suffixed "-1"/"-2"/...
+  // so React keys, the DB `part` column, and attempt lookups never collide.
   text: string;
   marks?: number; // absent (not null) when the source's mark allocation for this part was unreadable
   marks_unreadable?: boolean;
@@ -81,7 +86,23 @@ type RawBank = {
   appendices: RawChapter[];
 };
 
+// Suffix every occurrence of a label with its 1-based occurrence number
+// ("i" -> "i-1", "i-2", ...) whenever a question repeats a part label -
+// left untouched ("i") when the label is already unique in this question.
+function partKeysFor(parts: RawPart[]): string[] {
+  const counts = new Map<string, number>();
+  for (const p of parts) counts.set(p.part, (counts.get(p.part) ?? 0) + 1);
+  const seen = new Map<string, number>();
+  return parts.map((p) => {
+    if ((counts.get(p.part) ?? 0) <= 1) return p.part;
+    const occurrence = (seen.get(p.part) ?? 0) + 1;
+    seen.set(p.part, occurrence);
+    return `${p.part}-${occurrence}`;
+  });
+}
+
 function normalizeQuestion(q: RawQuestion): ExamQuestion {
+  const partKeys = q.parts ? partKeysFor(q.parts) : undefined;
   return {
     id: q.id,
     number: q.number,
@@ -89,8 +110,9 @@ function normalizeQuestion(q: RawQuestion): ExamQuestion {
     sourceExam: q.source_exam ?? null,
     stem: q.stem,
     text: q.text,
-    parts: q.parts?.map((p) => ({
+    parts: q.parts?.map((p, i) => ({
       part: p.part,
+      partKey: partKeys![i],
       text: p.text,
       marks: p.marks ?? undefined,
       marks_unreadable: p.marks_unreadable,

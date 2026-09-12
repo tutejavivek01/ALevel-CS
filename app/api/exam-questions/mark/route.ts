@@ -52,8 +52,11 @@ export async function POST(request: Request) {
   if (!question || !chapter) {
     return NextResponse.json({ error: 'Unknown question' }, { status: 404 });
   }
+  // Matched on partKey (the collision-free identity), not the raw display
+  // label - some questions in the source bank repeat a label (e.g. two
+  // parts both literally "i"), see exam-question-bank.ts's partKeysFor.
   const partContent = part
-    ? question.parts?.find((p) => p.part === part)
+    ? question.parts?.find((p) => p.partKey === part)
     : undefined;
   if (part && !partContent) {
     return NextResponse.json({ error: 'Unknown part' }, { status: 404 });
@@ -64,7 +67,7 @@ export async function POST(request: Request) {
     ? (partContent.marks ?? null)
     : question.marks || null;
   const siblingParts = (question.parts ?? [])
-    .filter((p) => p.part !== part)
+    .filter((p) => p.partKey !== part)
     .map((p) => ({ part: p.part, text: p.text }));
 
   const normalizedAnswer = answer.trim();

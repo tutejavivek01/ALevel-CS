@@ -60,8 +60,8 @@ seeding) exist specifically so later tasks don't have to reinvent them.
 - [x] 50. Mastery gate: history modal
 - [x] 51. Exam question bank: schema + RLS + content module
 - [x] 52. Exam question bank: AI marking route
-- [ ] 53. Exam question bank: topic-page UI
-- [ ] 54. Exam question bank: progress + confident-gate integration
+- [x] 53. Exam question bank: topic-page UI
+- [x] 54. Exam question bank: progress + confident-gate integration
 - [ ] 55. End-to-end polish & sign-off (mastery gate + exam question bank)
 
 ---
