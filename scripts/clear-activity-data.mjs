@@ -3,8 +3,10 @@
 // version, review/comment, status-history row, supporter flag, NEA note,
 // and activity-feed event. Current subtopic statuses (subtopic_status),
 // NEA section state (nea_state), personal resource links, glossary
-// progress, the authored python_problems/python_test_cases content, and
-// all auth accounts/profiles are deliberately kept.
+// progress, reading-material read state (topic_read_state/
+// chapter_read_state), the authored python_problems/python_test_cases
+// content, and all auth accounts/profiles are deliberately kept - same
+// "current state stays, history goes" split as everything else here.
 //
 // Runs directly against the database via SUPABASE_DB_URL (the same
 // pooler connection scripts/migrate.mjs uses), so it bypasses RLS and
@@ -36,6 +38,12 @@ const TABLES = [
   'subtopic_flags',
   'nea_notes',
   'activity_events',
+  // Added for the mastery gate / exam question bank (tasks 47-55) -
+  // items before their parent attempt row, though every FK here is
+  // already ON DELETE CASCADE.
+  'mastery_attempt_items',
+  'mastery_attempts',
+  'exam_question_attempts',
 ];
 
 async function main() {
