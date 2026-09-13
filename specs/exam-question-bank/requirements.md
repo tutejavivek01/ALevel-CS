@@ -507,16 +507,19 @@ check.
 
 ## 7. Open items for design/build phase (not blocking, flagged for later)
 
-- Whether the Year 12/13 level-filter preference (§2.5) persists as a
-  small per-account database field or a client-only setting.
+- ~~Whether the Year 12/13 level-filter preference (§2.5) persists as a
+  small per-account database field or a client-only setting.~~ **Resolved
+  at task 55 sign-off**: a client-only `localStorage` preference, global
+  across topics (design.md §5's component notes) — no schema addition
+  needed for a single boolean with no cross-device requirement.
 - Whether Anthropic prompt caching (a separate mechanism from the
   answer-dedup cache in §4.6) is worth adding on the stable
   system-instructions/question-context portion of the marking prompt,
   once real usage volume makes the saving meaningful.
-- Exact UI treatment for a `needs_review` question's source-page link —
-  a plain page-number citation vs. a link to a hosted scan (the source
-  book itself is not otherwise reproduced in the app, per copyright,
-  §1.4) — likely just the citation, but not yet decided.
+- ~~Exact UI treatment for a `needs_review` question's source-page link —
+  a plain page-number citation vs. a link to a hosted scan~~ **Resolved**:
+  implemented as the plain citation ("see page N of the source"), no link
+  — the source book is never reproduced or hosted by the app (§1.4).
 - Whether the exam-question route's coverage/quality thresholds (§5.2)
   need per-topic tuning once real attempt data exists, rather than one
   fixed 50%/70% pair for all 13 topics.

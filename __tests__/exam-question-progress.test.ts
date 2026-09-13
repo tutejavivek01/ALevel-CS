@@ -55,6 +55,7 @@ function markedAttempt(
     model_answer: '',
     misconceptions: [],
     confidence: 1,
+    failure_reason: null,
     created_at: new Date().toISOString(),
     marked_at: new Date().toISOString(),
   };

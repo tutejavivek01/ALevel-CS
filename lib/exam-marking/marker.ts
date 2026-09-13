@@ -134,10 +134,12 @@ export async function markExamAnswer(
     return { status: 'marked', result: message.parsed_output };
   } catch (err) {
     // Most-specific-first, matching the claude-api skill's guidance -
-    // rate limit / auth / bad request are distinguishable failure modes,
-    // even though every one of them lands as the same 'failed' outcome
-    // here (requirements.md §4.5 doesn't require the student to see the
-    // difference, only that nothing is lost and a retry is possible).
+    // rate limit / auth / bad request are distinguishable failure modes.
+    // Every one of them lands as marking_status 'failed' (requirements.md
+    // §4.5 only requires a retry path and that nothing is lost), but the
+    // specific `reason` string here is persisted (route.ts) and shown to
+    // the student (ExamAnswerResult.tsx) instead of being discarded, so a
+    // rate limit reads as "try again shortly" rather than a generic error.
     if (err instanceof Anthropic.RateLimitError) {
       return {
         status: 'failed',

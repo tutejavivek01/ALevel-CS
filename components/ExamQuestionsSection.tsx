@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { getExamChaptersForTopic } from '@/lib/exercises/exam-question-bank';
 import { computeTopicExamProgress } from '@/lib/exercises/exam-question-progress';
 import {
@@ -10,6 +10,20 @@ import {
 import { ExamChapterTabs } from './ExamChapterTabs';
 
 const YEAR_13_LEVEL = 'A Level (Year 13)';
+const YEAR_13_PREF_KEY = 'exam-include-year-13';
+
+// requirements.md §2.5 - a client-only preference (one of the two options
+// left open in §7), not tied to any one topic: once a student says "show
+// me Year 13 questions" they'd want that everywhere, not per-page. Wrapped
+// in try/catch like every other localStorage use in this app - a private
+// window or blocked storage must not break the filter itself.
+function readYear13Pref(): boolean {
+  try {
+    return window.localStorage.getItem(YEAR_13_PREF_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
 
 // The "Exam questions" section on a topic detail page (specs/
 // exam-question-bank/requirements.md §2.1). Server-rendered content
@@ -18,6 +32,24 @@ const YEAR_13_LEVEL = 'A Level (Year 13)';
 export function ExamQuestionsSection({ topicRef }: { topicRef: string }) {
   const allChapters = getExamChaptersForTopic(topicRef);
   const [includeYear13, setIncludeYear13] = useState(false);
+
+  // Starting at false server-side/first-paint and filling in the saved
+  // preference on mount avoids a hydration mismatch (window/localStorage
+  // don't exist during SSR) - same pattern as ExamAnswerForm's draft.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setIncludeYear13(readYear13Pref());
+  }, []);
+
+  function updateIncludeYear13(value: boolean) {
+    setIncludeYear13(value);
+    try {
+      window.localStorage.setItem(YEAR_13_PREF_KEY, String(value));
+    } catch {
+      // per-viewer convenience only - never block on this.
+    }
+  }
+
   const chapters = includeYear13
     ? allChapters
     : allChapters.filter((c) => c.level !== YEAR_13_LEVEL);
@@ -65,7 +97,7 @@ export function ExamQuestionsSection({ topicRef }: { topicRef: string }) {
           <input
             type="checkbox"
             checked={includeYear13}
-            onChange={(e) => setIncludeYear13(e.target.checked)}
+            onChange={(e) => updateIncludeYear13(e.target.checked)}
           />
           Include A Level (Year 13) questions
         </label>

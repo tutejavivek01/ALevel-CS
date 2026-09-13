@@ -20,7 +20,7 @@ export function ExamAnswerResult({
   if (attempt.marking_status === 'failed') {
     return (
       <p className="ex-feedback no">
-        Couldn&apos;t mark this answer —{' '}
+        {attempt.failure_reason ?? "Couldn't mark this answer."}{' '}
         <button className="btn2 alt" onClick={onRetry} disabled={retrying}>
           {retrying ? 'Retrying…' : 'retry'}
         </button>

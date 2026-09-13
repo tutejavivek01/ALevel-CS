@@ -146,7 +146,10 @@ export async function POST(request: Request) {
   });
 
   if (outcome.status === 'failed') {
-    return finish({ marking_status: 'failed' });
+    // requirements.md §4.5 - the marker's specific reason (rate limit /
+    // auth / schema / generic) is persisted so the UI can show it, rather
+    // than being computed and then silently discarded.
+    return finish({ marking_status: 'failed', failure_reason: outcome.reason });
   }
 
   if (outcome.result.unmarkable) {

@@ -209,7 +209,12 @@ All under `components/`, following the existing per-feature naming
 (`OcrChallenge*`, `Topic*`):
 
 - **`ExamQuestionsSection.tsx`** — the topic-page section (req. §2.1):
-  progress summary (§4 above), then `ExamChapterTabs`.
+  progress summary (§4 above), then `ExamChapterTabs`. The Year 12/13
+  level filter (req. §2.5) is resolved as a client-only `localStorage`
+  preference, global across topics rather than per-topic (a student who
+  says "show Year 13" would want that everywhere) - the other option §7
+  left open (a per-account DB field) wasn't worth a schema for a single
+  boolean with no cross-device requirement.
 - **`ExamChapterTabs.tsx`** — one tab per chapter for the topic (req.
   §1.2/§2.1); renders nothing but a heading when there's exactly one
   chapter (the `big-data`/4.11 case) rather than a redundant single tab.

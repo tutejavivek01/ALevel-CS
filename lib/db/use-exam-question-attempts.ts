@@ -24,6 +24,11 @@ export type ExamQuestionAttempt = {
   model_answer: string | null;
   misconceptions: string[] | null;
   confidence: number | null;
+  // requirements.md §4.5 - the specific reason a 'failed' attempt failed
+  // (rate limit / auth / schema / generic), so the UI can show something
+  // more useful than one generic "couldn't mark this" message for every
+  // cause. Null for every other marking_status.
+  failure_reason: string | null;
   created_at: string;
   marked_at: string | null;
 };
