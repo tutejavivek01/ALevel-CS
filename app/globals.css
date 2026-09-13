@@ -1643,3 +1643,23 @@ svg.fsm text.edge-label {
   border-radius: 6px;
   padding: 8px;
 }
+.reading-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.reading-chapter-tick {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--ink-dim);
+  margin-bottom: 10px;
+}
+.reading-read-dot {
+  color: var(--good);
+  font-size: 8px;
+  margin-left: 5px;
+  vertical-align: middle;
+}

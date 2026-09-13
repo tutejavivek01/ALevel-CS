@@ -6,6 +6,7 @@ import { ProgressRing } from './ProgressRing';
 import { ActivityFeed } from './ActivityFeed';
 import { DeadlineBanner } from './DeadlineBanner';
 import { useAllSubtopicStatuses } from '@/lib/db/use-all-subtopic-statuses';
+import { useAllTopicReadState } from '@/lib/db/use-reading-state';
 import { overallProgress, topicProgress } from '@/lib/progress';
 import { TOPICS } from '@/lib/spec';
 
@@ -13,6 +14,7 @@ const FOCUS_TOPIC = TOPICS.find((t) => t.hasExercises)!;
 
 export function Dashboard() {
   const { data: statuses, isLoading } = useAllSubtopicStatuses();
+  const { data: readState } = useAllTopicReadState();
   const safeStatuses = statuses ?? {};
   const overall = overallProgress(safeStatuses);
   const focusProgress = topicProgress(FOCUS_TOPIC, safeStatuses);
@@ -21,7 +23,9 @@ export function Dashboard() {
     <div className="stack">
       <div className="focus-banner">
         <div>
-          <div className="eyebrow">Currently studying &middot; {FOCUS_TOPIC.unit}</div>
+          <div className="eyebrow">
+            Currently studying &middot; {FOCUS_TOPIC.unit}
+          </div>
           <h2>{FOCUS_TOPIC.title}</h2>
           <p>
             {isLoading
@@ -40,7 +44,9 @@ export function Dashboard() {
           <div className="l">Overall syllabus confidence</div>
         </div>
         <div className="kpi">
-          <div className="n">{isLoading ? '…' : `${overall.confident}/${overall.total}`}</div>
+          <div className="n">
+            {isLoading ? '…' : `${overall.confident}/${overall.total}`}
+          </div>
           <div className="l">Sub-topics marked confident</div>
         </div>
         <div className="kpi">
@@ -57,10 +63,28 @@ export function Dashboard() {
           {TOPICS.map((topic) => {
             const progress = topicProgress(topic, safeStatuses);
             return (
-              <Link key={topic.id} href={`/topic/${topic.id}`} className="topic-tile">
+              <Link
+                key={topic.id}
+                href={`/topic/${topic.id}`}
+                className="topic-tile"
+              >
                 <div className="row1">
-                  <span className="ref">{topic.ref}</span>
-                  <ProgressRing percent={isLoading ? 0 : progress.pct} size={26} stroke={4} />
+                  <span className="ref">
+                    {topic.ref}
+                    {readState?.[topic.ref] && (
+                      <span
+                        className="reading-read-dot"
+                        title="Reading material marked as read"
+                      >
+                        ●
+                      </span>
+                    )}
+                  </span>
+                  <ProgressRing
+                    percent={isLoading ? 0 : progress.pct}
+                    size={26}
+                    stroke={4}
+                  />
                 </div>
                 <div className="title">{topic.title}</div>
                 {topic.unit && <div className="unit">{topic.unit}</div>}

@@ -4,8 +4,14 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import type { Topic, ReadingArea, ReadingChapter } from '@/lib/spec';
 import { getReadingTimeMinutes } from '@/lib/spec';
+import {
+  useChapterReadStates,
+  useSetChapterRead,
+} from '@/lib/db/use-reading-state';
 import { Card } from './Card';
 import { ReadingChapterBody } from './ReadingChapterBody';
+import { ChapterReadTick } from './ChapterReadTick';
+import { MarkAsReadToggle } from './MarkAsReadToggle';
 
 const YEAR_13_LEVEL = 'A Level (Year 13)';
 // Same key ExamQuestionsSection already uses (requirements.md §1.2 - "the
@@ -75,6 +81,13 @@ export function ReadingPageBody({
   const readingMinutes = getReadingTimeMinutes(area, includeYear13);
   const source = area.chapters[0]?.source;
 
+  const allChapterIds = area.chapters.map((c) => c.id);
+  const { data: chapterReadStates } = useChapterReadStates(
+    topic.ref,
+    allChapterIds
+  );
+  const { setChapterRead } = useSetChapterRead(topic.ref, allChapterIds);
+
   // Divider position: the first chapter (in reading order) whose level is
   // Year 13, when both levels are present in what's currently shown.
   const firstYear13Index = chapters.findIndex((c) => c.level === YEAR_13_LEVEL);
@@ -90,9 +103,12 @@ export function ReadingPageBody({
             {readingMinutes} min read
           </p>
         </div>
-        <Link href={`/topic/${topic.id}`} className="link-btn">
-          ← Back to {topic.ref}
-        </Link>
+        <div className="reading-header-actions">
+          <MarkAsReadToggle topicRef={topic.ref} />
+          <Link href={`/topic/${topic.id}`} className="link-btn">
+            ← Back to {topic.ref}
+          </Link>
+        </div>
       </div>
 
       {hasYear13 && (
@@ -139,6 +155,11 @@ export function ReadingPageBody({
             </span>
           </summary>
           <div className="reading-chapter-body">
+            <ChapterReadTick
+              chapterId={chapter.id}
+              readAt={chapterReadStates?.[chapter.id]}
+              onToggle={setChapterRead}
+            />
             <ReadingChapterBody html={chapter.bodyHtml} />
 
             {chapter.exercisesHtml && (

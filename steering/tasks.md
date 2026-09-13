@@ -66,7 +66,7 @@ seeding) exist specifically so later tasks don't have to reinvent them.
 - [x] 56. Reading Material: ingestion pipeline + content module + schema/RLS
 - [x] 57. Reading Material: figures route
 - [x] 58. Reading Material: reading page UI
-- [ ] 59. Reading Material: Mark as read
+- [x] 59. Reading Material: Mark as read
 - [ ] 60. End-to-end polish & sign-off (Reading Material)
 
 ---

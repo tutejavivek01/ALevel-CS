@@ -49,6 +49,8 @@ test('the export contains every table, with counts matching the database directl
     'mastery_attempts',
     'mastery_attempt_items',
     'exam_question_attempts',
+    'topic_read_state',
+    'chapter_read_state',
     'activity_events',
   ];
   for (const table of expectedTables) {

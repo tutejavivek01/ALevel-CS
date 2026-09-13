@@ -29,6 +29,8 @@ const EXPORTED_TABLES = [
   'mastery_attempts',
   'mastery_attempt_items',
   'exam_question_attempts',
+  'topic_read_state',
+  'chapter_read_state',
   'activity_events',
 ] as const;
 
