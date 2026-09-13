@@ -394,18 +394,26 @@ bank already does.
 
 ## 7. Open items for design/build phase (not blocking, flagged for later)
 
-- Exact reading-time formula (a simple words-per-minute constant is the
-  obvious starting point; not yet decided which constant).
+- ~~Exact reading-time formula~~ **Resolved at task 60 sign-off**: 200
+  words/minute (`lib/spec/reading-content.ts`'s `WORDS_PER_MINUTE`), one
+  constant in one place if it needs tuning later — not re-derived from
+  real usage data, since none exists yet.
 - Whether the ingestion script needs a `--check`-only mode (verify counts
   without regenerating the artifact) for CI, or is only ever run by hand
-  when `reference/book_md/` changes.
-- Exact markdown-parsing library choice (a design.md decision, not a
-  requirements one) — front matter is simple enough to hand-parse, but
-  the body (paragraphs, bullet lists, bare code fences, images) likely
-  warrants a real parser rather than a hand-rolled one, given the
-  correctness bar the rest of this app holds itself to.
-- Whether the per-chapter tick UI sits inline in each chapter's
-  `<details>` header (next to its title) or in the jump-menu list itself
-  — both are consistent with the requirements above; left to design.md.
+  when `reference/book_md/` changes. Still open — the script has no such
+  mode; it's only ever run by hand today.
+- ~~Exact markdown-parsing library choice~~ **Resolved**: `gray-matter`
+  (front matter) + `unified`/`remark-parse`/`remark-rehype`/
+  `rehype-stringify` (body → HTML via an intermediate hast tree, so a
+  custom visitor can rewrite image nodes) — devDependencies only, never
+  imported by the running app (`specs/reading-material/design.md` §1).
+- ~~Whether the per-chapter tick UI sits inline in each chapter's
+  `<details>` header or in the jump-menu list~~ **Resolved differently
+  from either option**: it sits inside the chapter's _expanded body_,
+  above the prose — a checkbox nested in `<summary>` fights the native
+  disclosure-toggle click, and placing it in the body nudges the intended
+  flow (open the chapter, read it, then tick it) rather than ticking
+  without ever opening it.
 - Whether "estimated reading time" is shown per-chapter as well as
-  per-area, given the per-chapter tick feature now exists.
+  per-area, given the per-chapter tick feature now exists. Still open —
+  only the area-level total is shown.

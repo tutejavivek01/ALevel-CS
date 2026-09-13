@@ -1557,6 +1557,16 @@ svg.fsm text.edge-label {
   color: var(--muted);
   margin-left: auto;
 }
+.reading-extension-badge {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--learn);
+  background: var(--learn-soft);
+  padding: 2px 7px;
+  border-radius: 999px;
+}
 .reading-chapter-body {
   padding: 4px 0 16px 18px;
   font-size: 13.5px;

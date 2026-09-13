@@ -12,6 +12,28 @@ test.beforeEach(async ({ page }) => {
   await page.waitForURL('/');
 });
 
+test('the reading page is marked noindex (requirements.md §5)', async ({
+  page,
+}) => {
+  await page.goto('/topic/programming/reading');
+  const robots = await page
+    .locator('meta[name="robots"]')
+    .getAttribute('content');
+  expect(robots).toContain('noindex');
+  expect(robots).toContain('nofollow');
+});
+
+test('the page footer carries the real book citation (requirements.md §5)', async ({
+  page,
+}) => {
+  await page.goto('/topic/programming/reading');
+  await expect(
+    page.getByText(
+      'AQA AS and A Level Computer Science (P.M. & R.S.U. Heathcote), PG Online, ISBN 978-1-910523-07-0'
+    )
+  ).toBeVisible();
+});
+
 test('the "Read more" link on the topic page opens the reading page', async ({
   page,
 }) => {
@@ -90,4 +112,24 @@ test('a figure enlarges on click, and the Exercises section links to the exam qu
   await expect(
     page.getByRole('heading', { name: 'Exam questions' })
   ).toBeVisible();
+});
+
+test('an appendix is ordered last and labelled as extension material, not just implied by its name', async ({
+  page,
+}) => {
+  // data-representation (4.5) ends in Appendix A - Year 13 content, so
+  // needs the level filter checked to be visible at all.
+  await page.goto('/topic/data-representation/reading');
+  await page.getByLabel('Include A Level (Year 13) chapters').check();
+
+  const chapterIds = await page
+    .locator('.reading-chapter')
+    .evaluateAll((els) => els.map((el) => el.id));
+  expect(chapterIds[chapterIds.length - 1]).toBe(
+    'appendix-a-floating-point-form'
+  );
+
+  const appendix = page.locator('#appendix-a-floating-point-form');
+  await expect(appendix.getByText('Extension', { exact: true })).toBeVisible();
+  await expect(page.getByText('Extension material').first()).toBeVisible();
 });

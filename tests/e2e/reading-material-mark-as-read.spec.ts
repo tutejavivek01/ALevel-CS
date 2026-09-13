@@ -114,12 +114,20 @@ test.describe.serial('big-data chapter-tick aggregation', () => {
       .locator('#ch72-big-data')
       .getByLabel('Mark this chapter read');
     await tick.check();
-    await expect(
-      page.getByRole('button', { name: '✓ Marked as read' })
-    ).toBeVisible();
+    const markedButton = page.getByRole('button', { name: '✓ Marked as read' });
+    await expect(markedButton).toBeVisible();
+    // The chapter tick's own network write must resolve before the
+    // aggregation rule's auto-mark mutation even fires (it runs from that
+    // mutation's onSuccess) - so the button showing "marked" here is only
+    // ever the *optimistic* update from that auto-mark. Wait for it to
+    // re-enable (its mutation genuinely settling) before unmarking,
+    // otherwise a manual unmark fired while the auto-mark's own network
+    // write is still in flight can race it and lose - whichever request
+    // completes last wins, regardless of click order.
+    await expect(markedButton).toBeEnabled();
 
     // Un-mark the area directly.
-    await page.getByRole('button', { name: '✓ Marked as read' }).click();
+    await markedButton.click();
     await expect(
       page.getByRole('button', { name: 'Mark as read' })
     ).toBeVisible();

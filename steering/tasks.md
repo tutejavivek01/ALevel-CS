@@ -67,7 +67,7 @@ seeding) exist specifically so later tasks don't have to reinvent them.
 - [x] 57. Reading Material: figures route
 - [x] 58. Reading Material: reading page UI
 - [x] 59. Reading Material: Mark as read
-- [ ] 60. End-to-end polish & sign-off (Reading Material)
+- [x] 60. End-to-end polish & sign-off (Reading Material)
 
 ---
 

@@ -66,6 +66,11 @@ test('a real figure is served with the right content type for an authenticated r
   );
   expect(response.status()).toBe(200);
   expect(response.headers()['content-type']).toBe('image/png');
+  // requirements.md §2.2/design.md §2 - private + immutable, never a
+  // shared/CDN cache serving authenticated content to another request.
+  expect(response.headers()['cache-control']).toBe(
+    'private, max-age=31536000, immutable'
+  );
   const body = await response.body();
   expect(body.length).toBeGreaterThan(0);
 });

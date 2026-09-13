@@ -91,6 +91,13 @@ export function ReadingPageBody({
   // Divider position: the first chapter (in reading order) whose level is
   // Year 13, when both levels are present in what's currently shown.
   const firstYear13Index = chapters.findIndex((c) => c.level === YEAR_13_LEVEL);
+  // requirements.md §1.2 - appendices are ordered last (already true by
+  // construction, per the ingestion script's sort) and must also be
+  // labelled as extension material, not just implied by their "Appendix"
+  // name - a divider plus an inline badge, matching the Year 13 pattern.
+  const firstAppendixIndex = chapters.findIndex(
+    (c) => typeof c.chapter === 'string'
+  );
 
   return (
     <Card>
@@ -125,8 +132,11 @@ export function ReadingPageBody({
       <nav className="reading-toc" aria-label="Chapters">
         {chapters.map((chapter, i) => (
           <span key={chapter.id}>
-            {i === firstYear13Index && (
+            {i === firstYear13Index && i !== firstAppendixIndex && (
               <span className="reading-year-divider">A Level (Year 13)</span>
+            )}
+            {i === firstAppendixIndex && (
+              <span className="reading-year-divider">Extension material</span>
             )}
             <a
               href={`#${chapter.id}`}
@@ -140,9 +150,14 @@ export function ReadingPageBody({
 
       {chapters.map((chapter, i) => (
         <details className="reading-chapter" id={chapter.id} key={chapter.id}>
-          {i === firstYear13Index && (
+          {i === firstYear13Index && i !== firstAppendixIndex && (
             <div className="reading-year-divider standalone">
               A Level (Year 13)
+            </div>
+          )}
+          {i === firstAppendixIndex && (
+            <div className="reading-year-divider standalone">
+              Extension material
             </div>
           )}
           <summary>
@@ -150,6 +165,9 @@ export function ReadingPageBody({
               {chapterLabel(chapter)}
             </span>{' '}
             <span>{chapter.title}</span>
+            {typeof chapter.chapter === 'string' && (
+              <span className="reading-extension-badge">Extension</span>
+            )}
             <span className="reading-chapter-meta">
               {chapter.level} · pages {chapter.pdfPages}
             </span>
