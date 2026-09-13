@@ -62,7 +62,7 @@ export function ExamQuestionsSection({ topicRef }: { topicRef: string }) {
   if (allChapters.length === 0) return null;
 
   return (
-    <section className="exam-questions-section">
+    <section id="exam-questions" className="exam-questions-section">
       <h3 className="section-title" style={{ marginTop: 20 }}>
         Exam questions
       </h3>

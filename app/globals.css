@@ -1485,3 +1485,161 @@ svg.fsm text.edge-label {
 .exam-result.unmarkable .field-label {
   color: var(--muted);
 }
+
+/* Reading Material (specs/reading-material/design.md §3) */
+.reading-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+.reading-header h1 {
+  font-size: 22px;
+  margin-top: 4px;
+}
+.reading-toc {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  font-size: 12.5px;
+  margin: 10px 0 16px;
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border-radius: 8px;
+}
+.reading-toc a {
+  color: var(--accent);
+}
+.reading-year-divider {
+  display: block;
+  width: 100%;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 6px 0 2px;
+}
+.reading-year-divider.standalone {
+  margin: 14px 0 4px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border);
+}
+.reading-chapter {
+  border-bottom: 1px solid var(--border);
+}
+.reading-chapter > summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 10px 0;
+  font-size: 13.5px;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.reading-chapter > summary::-webkit-details-marker {
+  display: none;
+}
+.reading-chapter > summary::before {
+  content: '▸';
+  color: var(--muted);
+  font-size: 11px;
+  transition: transform 0.12s ease;
+}
+.reading-chapter[open] > summary::before {
+  transform: rotate(90deg);
+}
+.reading-chapter-meta {
+  font-size: 11px;
+  color: var(--muted);
+  margin-left: auto;
+}
+.reading-chapter-body {
+  padding: 4px 0 16px 18px;
+  font-size: 13.5px;
+  color: var(--ink-dim);
+  max-width: 74ch;
+}
+.reading-body :is(h1, h2) {
+  color: var(--ink);
+  font-size: 15px;
+  margin: 16px 0 8px;
+}
+.reading-body p,
+.reading-body li {
+  margin: 8px 0;
+  line-height: 1.55;
+}
+.reading-body pre {
+  background: var(--code-bg);
+  color: var(--code-ink);
+  padding: 10px 12px;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+}
+.reading-exercises {
+  margin-top: 14px;
+  border-top: 1px dashed var(--border);
+  padding-top: 8px;
+}
+.reading-exercises > summary {
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.reading-exam-link {
+  margin-top: 8px;
+  font-size: 12.5px;
+}
+.reading-citation {
+  margin-top: 20px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--muted);
+  font-style: italic;
+}
+/* Figures are always on a light surface, regardless of theme - a
+   grayscale scan must not sit directly against a dark page background
+   (requirements.md §2.3). Deliberately a fixed light color, not
+   var(--surface), which flips dark in dark mode. */
+.reading-figure {
+  display: block;
+  margin: 10px 0;
+  max-width: 100%;
+}
+.reading-figure-frame {
+  display: block;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px;
+  max-width: 100%;
+  width: fit-content;
+  cursor: zoom-in;
+}
+.reading-figure-frame img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+.reading-figure-caption {
+  display: block;
+  font-size: 11.5px;
+  color: var(--muted);
+  margin-top: 4px;
+  font-style: italic;
+}
+.reading-figure-enlarged {
+  max-width: 100%;
+  height: auto;
+  background: #ffffff;
+  border-radius: 6px;
+  padding: 8px;
+}

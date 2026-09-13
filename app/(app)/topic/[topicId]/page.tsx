@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Card } from '@/components/Card';
 import { TopicChecklist } from '@/components/TopicChecklist';
@@ -9,6 +10,7 @@ import {
   getTopicById,
   getSpecContentForTopic,
   getWatchResourcesForTopic,
+  getReadingContentForTopic,
 } from '@/lib/spec';
 
 export default async function TopicPage(props: PageProps<'/topic/[topicId]'>) {
@@ -21,6 +23,7 @@ export default async function TopicPage(props: PageProps<'/topic/[topicId]'>) {
 
   const specContent = getSpecContentForTopic(topic);
   const watchResources = getWatchResourcesForTopic(topic);
+  const readingContent = getReadingContentForTopic(topic);
 
   return (
     <Card>
@@ -31,6 +34,11 @@ export default async function TopicPage(props: PageProps<'/topic/[topicId]'>) {
           {topic.unit && <span className="unit-badge">{topic.unit}</span>}
           <p className="blurb">{topic.blurb}</p>
         </div>
+        {readingContent && (
+          <Link href={`/topic/${topic.id}/reading`} className="link-btn">
+            Read more →
+          </Link>
+        )}
       </div>
 
       <TopicChecklist

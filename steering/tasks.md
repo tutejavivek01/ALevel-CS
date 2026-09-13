@@ -65,7 +65,7 @@ seeding) exist specifically so later tasks don't have to reinvent them.
 - [x] 55. End-to-end polish & sign-off (mastery gate + exam question bank)
 - [x] 56. Reading Material: ingestion pipeline + content module + schema/RLS
 - [x] 57. Reading Material: figures route
-- [ ] 58. Reading Material: reading page UI
+- [x] 58. Reading Material: reading page UI
 - [ ] 59. Reading Material: Mark as read
 - [ ] 60. End-to-end polish & sign-off (Reading Material)
 
