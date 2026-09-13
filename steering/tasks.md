@@ -63,7 +63,7 @@ seeding) exist specifically so later tasks don't have to reinvent them.
 - [x] 53. Exam question bank: topic-page UI
 - [x] 54. Exam question bank: progress + confident-gate integration
 - [x] 55. End-to-end polish & sign-off (mastery gate + exam question bank)
-- [ ] 56. Reading Material: ingestion pipeline + content module + schema/RLS
+- [x] 56. Reading Material: ingestion pipeline + content module + schema/RLS
 - [ ] 57. Reading Material: figures route
 - [ ] 58. Reading Material: reading page UI
 - [ ] 59. Reading Material: Mark as read

@@ -25,6 +25,13 @@ export {
   type WatchResource,
   type TopicWatchResources,
 } from './watch-resources';
+export {
+  READING_CONTENT,
+  getReadingContentForTopic,
+  getReadingTimeMinutes,
+  type ReadingChapter,
+  type ReadingArea,
+} from './reading-content';
 
 import { TOPICS, type Topic } from './topics';
 

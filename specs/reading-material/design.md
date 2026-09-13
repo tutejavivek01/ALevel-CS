@@ -91,13 +91,20 @@ The rehype visitor, run once per `<img>` node during ingestion:
 
 - Rewrites `src` from `figures/chNN-pPPP-NN.png` to
   `/api/reading-material/figures/chNN-pPPP-NN.png` (§2).
-- Wraps the image in `<figure class="reading-figure"><div
-class="reading-figure-frame"><img loading="lazy" .../></div><figcaption>
-{alt text}</figcaption></figure>` — the frame div is what gets the
-  "light surface with padding regardless of theme" CSS treatment (req.
-  §2.3); the `<figcaption>` is the image's own alt text verbatim, since
-  (confirmed by exploration) no chapter in the source ever carries a
-  caption beyond that.
+- Wraps the image in `<span class="reading-figure"><span
+class="reading-figure-frame"><img loading="lazy" .../></span><span
+class="reading-figure-caption">{alt text}</span></span>` — the frame span
+  is what gets the "light surface with padding regardless of theme" CSS
+  treatment (`display: block` via CSS, not tag semantics), and the
+  caption span is the image's own alt text verbatim, since (confirmed by
+  exploration) no chapter in the source ever carries a caption beyond
+  that. **Deliberately `<span>`, not `<figure>`/`<div>`/`<figcaption>`**:
+  verified directly (by parsing every chapter's markdown AST, not
+  assumed) that 18 of the 422 images sit inline within a running
+  paragraph's prose rather than alone in their own paragraph — a block
+  element can't validly nest inside the `<p>` remark-rehype produces for
+  those, but a span (phrasing content) can, in every case, so one wrapper
+  shape covers both rather than needing two.
 - Verified at ingestion time (not just documented as a hope): the script
   counts every `figures/...` reference it rewrites across all 74 files and
   asserts that count is exactly 422 and that every referenced file exists
