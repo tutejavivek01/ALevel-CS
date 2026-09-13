@@ -62,7 +62,12 @@ seeding) exist specifically so later tasks don't have to reinvent them.
 - [x] 52. Exam question bank: AI marking route
 - [x] 53. Exam question bank: topic-page UI
 - [x] 54. Exam question bank: progress + confident-gate integration
-- [ ] 55. End-to-end polish & sign-off (mastery gate + exam question bank)
+- [x] 55. End-to-end polish & sign-off (mastery gate + exam question bank)
+- [ ] 56. Reading Material: ingestion pipeline + content module + schema/RLS
+- [ ] 57. Reading Material: figures route
+- [ ] 58. Reading Material: reading page UI
+- [ ] 59. Reading Material: Mark as read
+- [ ] 60. End-to-end polish & sign-off (Reading Material)
 
 ---
 
@@ -1121,3 +1126,102 @@ Per `design.md` §8, mirrors tasks 29/37/42/46 for this round.
 
 **Done when:** all of the above hold, and `steering/tasks.md` reflects
 every task in this list checked off.
+
+## 56. Reading Material: ingestion pipeline + content module + schema/RLS
+
+Per `specs/reading-material/design.md` §1/§4.1, requirements.md §1/§4.
+
+- Add devDependencies: `gray-matter`, `unified`, `remark-parse`,
+  `remark-rehype`, `rehype-stringify`, `unist-util-visit`.
+- `scripts/ingest-reading-material.mjs`: parses `reference/book_md/`'s
+  front matter + body per chapter, splits off the trailing `## Exercises`
+  section, rewrites every image to `/api/reading-material/figures/...`
+  and wraps it (light-surface frame + alt-text caption), orders chapters
+  year-then-number with appendices last, and fails loudly if the
+  422-image-reference count stops matching `figures/`'s file count.
+  Writes `lib/generated/reading-content.json`.
+- `lib/spec/reading-content.ts`: typed re-export, `getReadingContentForTopic`,
+  `getReadingTimeMinutes`.
+- Migrations for `topic_read_state` and `chapter_read_state` — student-
+  insert/update, open select, no delete (mirrors `ocr_challenge_review_
+  state`'s pre-due-date shape exactly).
+- Vitest structural-integrity test: every topic has ≥1 chapter; word
+  totals match the manifest; a known multi-year topic's chapter order is
+  year-then-number; appendices last; zero remaining `figures/` relative
+  paths in any generated HTML.
+
+**Done when:** the integrity test passes, the ingestion script fails
+loudly on a deliberately-broken figure-count fixture, and both new tables'
+RLS is confirmed against real sessions (student can toggle; supporter can
+read but not write).
+
+## 57. Reading Material: figures route
+
+Per `specs/reading-material/design.md` §2, requirements.md §2.2.
+
+- `app/api/reading-material/figures/[filename]/route.ts`: auth check in
+  code (never assume middleware coverage — the site's matcher excludes
+  image extensions), path-traversal containment check, serve from
+  `reference/book_md/figures/`, `Cache-Control: private, immutable`.
+- `next.config.ts`: `outputFileTracingIncludes` for the figures directory.
+
+**Done when:** an unauthenticated request 401s, a path-traversal-shaped
+filename 404s (not 500s, not served), and a real figure is returned with
+the right content type for an authenticated request.
+
+## 58. Reading Material: reading page UI
+
+Per `specs/reading-material/design.md` §3, requirements.md §3.
+
+- `app/(app)/topic/[topicId]/reading/page.tsx`: header (ref/title,
+  chapter count, reading time), jump menu with a Year 12/13 divider,
+  chapters as collapsed `<details>` each with `ReadingChapterBody`
+  (renders pre-built HTML, click-to-enlarge via the existing `Modal`) and
+  a separately-collapsed Exercises section linking out to the exam
+  question bank where that spec area has one.
+- `noindex` metadata.
+- "Read more" entry point added to `.topic-head` on the topic detail page.
+
+**Done when:** the reading page renders a known multi-chapter topic in
+the documented order with a working jump menu; a figure enlarges on
+click; the Exercises section links to the exam question bank where one
+exists for that topic.
+
+## 59. Reading Material: Mark as read
+
+Per `specs/reading-material/design.md` §4, requirements.md §4.
+
+- `lib/db/use-reading-state.ts`: `useTopicReadState`, `useChapterReadStates`,
+  `useSetTopicRead`, `useSetChapterRead` (the last's `onSuccess`
+  auto-marks the topic read once every chapter is ticked).
+- `components/MarkAsReadToggle.tsx`, `components/ChapterReadTick.tsx`.
+- Dashboard tile gains a passive read-state indicator next to its
+  `ProgressRing`.
+- `topic_read_state`/`chapter_read_state` added to `EXPORTED_TABLES`
+  (`app/export/route.ts`) and `expectedTables` (`tests/e2e/
+  data-export.spec.ts`).
+
+**Done when:** the area toggle persists across reload and is visible on
+the Dashboard without opening the reading page; ticking every chapter in
+a topic automatically marks the topic read; un-marking the topic leaves
+every chapter tick untouched; nothing here changes `useMasteryGateStatus`'s
+output for any topic (requirements.md §4.5 — verified, not assumed).
+
+## 60. End-to-end polish & sign-off (Reading Material)
+
+Per `design.md` §8, mirrors tasks 29/37/42/46/55 for this round.
+
+- Walk `specs/reading-material/requirements.md` top to bottom against the
+  running app.
+- Full Playwright coverage across tasks 56–59's flows, confirmed together
+  rather than in isolation.
+- Decide, with the user, whether `reference/book_md/` (source markdown +
+  422 figures) is committed to the repo — the ingestion script and the
+  figures route both need it present wherever they run, and it has been
+  left deliberately untracked so far pending this decision.
+- Run the full verification suite: lint, Vitest, a clean production
+  build, and the full Playwright suite.
+
+**Done when:** all of the above hold, the `reference/book_md/` tracking
+decision is made (not silently left ambiguous), and `steering/tasks.md`
+reflects every task in this list checked off.

@@ -67,6 +67,8 @@ erDiagram
     ocr_challenge_code_versions ||--o{ ocr_challenge_version_comments : has
     profiles ||--o{ mastery_attempts : attempts
     mastery_attempts ||--o{ mastery_attempt_items : has
+    profiles ||--o{ topic_read_state : marks_read
+    profiles ||--o{ chapter_read_state : marks_read
 ```
 
 (`ocr_challenge_review_state` and its `ocr_challenge_code_versions`/
@@ -503,6 +505,15 @@ worth a quick decision before build starts.
                                  (jointly editable, §6.11), saved-version
                                  history + per-version comments (§6.10),
                                  attempt history, reviews
+/topic/[topicId]/reading         Reading Material: the spec area's full
+                                 textbook chapters, diagrams in place,
+                                 "Mark as read" (`specs/reading-material/
+                                 design.md`)
+/api/reading-material/figures/
+  [filename]                     Auth-gated figure serving for the above —
+                                 does its own auth check in code, since
+                                 the site middleware excludes image
+                                 extensions from auth-gating
 /export                          Triggers the JSON data export (§10)
 ```
 
@@ -992,6 +1003,18 @@ each cover 4.1–4.13 in order; every `SpecSection.ref` starts with its
 topic's `ref`; every section has real content (a length floor guards
 against silently thinning it back to a label); the no-video-URL guard
 above.
+
+**A third addition — Reading Material** (`specs/reading-material/
+requirements.md` and its sibling `design.md`) adds a per-spec-area reading
+page (the full textbook chapters, diagrams in place) reachable from a new
+"Read more" entry point on this page's `.topic-head` block, plus a "Mark
+as read" toggle. Unlike the two additions above, this one **does** need a
+new route, a new client component, and new database tables (a read-state
+toggle, not a status the confident gate cares about — req. §4.5
+deliberately keeps it separate from §12). Documented in its own sibling
+doc, not here, following the same "documented at `specs/<feature>/`, not
+grown into this file indefinitely" convention `specs/exam-question-bank/`
+established.
 
 ### 6.13 "Confident" mastery gate (req. §12)
 
