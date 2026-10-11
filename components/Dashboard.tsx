@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { Card } from './Card';
+import { HomeSearch } from './HomeSearch';
 import { ProgressRing } from './ProgressRing';
 import { ActivityFeed } from './ActivityFeed';
 import { DeadlineBanner } from './DeadlineBanner';
@@ -25,6 +26,8 @@ export function Dashboard() {
 
   return (
     <div className="stack">
+      <HomeSearch />
+
       <div className="focus-banner">
         <div>
           <div className="eyebrow">
