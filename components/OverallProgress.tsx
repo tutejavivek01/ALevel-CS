@@ -1,12 +1,12 @@
 'use client';
 
 import { ProgressRing } from './ProgressRing';
-import { useAllSubtopicStatuses } from '@/lib/db/use-all-subtopic-statuses';
-import { overallProgress } from '@/lib/progress';
+import { useAllTopicCompletion } from '@/lib/db/use-topic-completion';
+import { chapterProgress } from '@/lib/progress';
 
 export function OverallProgress() {
-  const { data: statuses, isLoading } = useAllSubtopicStatuses();
-  const progress = overallProgress(statuses ?? {});
+  const { data: completion, isLoading } = useAllTopicCompletion();
+  const progress = chapterProgress(completion ?? {});
 
   return (
     <>
@@ -14,7 +14,7 @@ export function OverallProgress() {
       <div>
         <div className="num">{isLoading ? '…' : `${progress.pct}%`}</div>
         <div className="lbl">
-          {isLoading ? 'loading' : `${progress.confident}/${progress.total} confident`}
+          {isLoading ? 'loading' : `${progress.completed}/${progress.total} chapters complete`}
         </div>
       </div>
     </>

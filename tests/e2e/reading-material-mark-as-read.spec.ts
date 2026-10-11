@@ -137,7 +137,7 @@ test.describe.serial('big-data chapter-tick aggregation', () => {
   });
 });
 
-test('marking read has no effect on the confident mastery gate', async ({
+test('marking read does not complete the chapter or skip its test', async ({
   page,
 }) => {
   // `algorithms` (4.3), not `programming` (4.1) - `reading-material-
@@ -150,14 +150,15 @@ test('marking read has no effect on the confident mastery gate', async ({
   // earlier activity in this shared dev database.
   const admin = adminClient();
   await admin.from('mastery_attempts').delete().eq('topic_id', 'algorithms');
+  await admin.from('topic_completion').delete().eq('topic_id', 'algorithms');
   await admin
     .from('subtopic_status')
     .update({ status: 'not-started' })
     .eq('subtopic_id', 'algorithms__0');
 
   await login(page);
-  // `algorithms` (4.3) is on the programming-challenge gate route -
-  // Confident is unavailable without passing it, regardless of read state.
+  // `algorithms` (4.3) is on the programming-challenge route - Mark
+  // Complete must still ask the test, regardless of read state.
   await page.goto('/topic/algorithms/reading');
   await page.getByRole('button', { name: 'Mark as read' }).click();
   await expect(
@@ -165,16 +166,11 @@ test('marking read has no effect on the confident mastery gate', async ({
   ).toBeVisible();
 
   await page.goto('/topic/algorithms');
-  const row = page.locator('.check-row').first();
-  await row.getByRole('button', { name: 'Confident' }).click();
-  // Marking read must not have unlocked the gate - clicking Confident
-  // opens the Test-knowledge modal instead of setting the status.
+  await expect(page.locator('.chapter-complete')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Mark Complete' }).click();
   await expect(
-    page.getByRole('heading', { name: 'Test knowledge' })
+    page.getByRole('heading', { name: 'Mark Complete — test your knowledge' })
   ).toBeVisible();
-  await expect(row.getByRole('button', { name: 'Confident' })).not.toHaveClass(
-    /on/
-  );
 
   await cleanupTopic('4.3');
 });

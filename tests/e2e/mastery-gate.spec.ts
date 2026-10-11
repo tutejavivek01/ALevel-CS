@@ -25,6 +25,9 @@ async function resetMasteryState(topicId: string) {
     await client.query('delete from mastery_attempts where topic_id = $1', [
       topicId,
     ]);
+    await client.query('delete from topic_completion where topic_id = $1', [
+      topicId,
+    ]);
     await client.query(
       'delete from subtopic_status where subtopic_id like $1',
       [`${topicId}__%`]
@@ -38,6 +41,10 @@ async function resetMasteryState(topicId: string) {
   }
 }
 
+// Tests share the `consequences` topic's attempt/completion rows, so run
+// them one at a time.
+test.describe.configure({ mode: 'serial' });
+
 test.beforeEach(async ({ page }) => {
   await page.goto('/login');
   await page.getByLabel('Email').fill(process.env.E2E_STUDENT_EMAIL!);
@@ -46,7 +53,7 @@ test.beforeEach(async ({ page }) => {
   await page.waitForURL('/');
 });
 
-test('clicking Confident before passing the gate opens the quiz instead of setting the status', async ({
+test('Confident is free; only Mark Complete asks the questionnaire', async ({
   page,
 }) => {
   const topicId = 'consequences'; // 4.8 - a quiz-route topic, few items
@@ -56,15 +63,21 @@ test('clicking Confident before passing the gate opens the quiz instead of setti
   const row = page.locator('.check-row').first();
   await row.getByRole('button', { name: 'Confident' }).click();
 
-  await expect(
-    page.getByRole('heading', { name: 'Test knowledge' })
-  ).toBeVisible();
-  await expect(row.getByRole('button', { name: 'Confident' })).not.toHaveClass(
+  // No gate: status is set immediately and no test opens.
+  await expect(row.getByRole('button', { name: 'Confident' })).toHaveClass(
     /on/
   );
+  await expect(
+    page.getByRole('heading', { name: 'Mark Complete — test your knowledge' })
+  ).not.toBeVisible();
+
+  await page.getByRole('button', { name: 'Mark Complete' }).click();
+  await expect(
+    page.getByRole('heading', { name: 'Mark Complete — test your knowledge' })
+  ).toBeVisible();
 });
 
-test('a sub-80% quiz attempt is recorded but does not unlock Confident; an 80%+ attempt does', async ({
+test('a sub-80% quiz attempt shows attempted-not-passed; an 80%+ attempt completes the chapter', async ({
   page,
 }) => {
   const topicId = 'consequences';
@@ -72,9 +85,9 @@ test('a sub-80% quiz attempt is recorded but does not unlock Confident; an 80%+ 
   await resetMasteryState(topicId);
 
   await page.goto(`/topic/${topicId}`);
-  await page.getByRole('button', { name: 'Test knowledge' }).click();
+  await page.getByRole('button', { name: 'Mark Complete' }).click();
   await expect(
-    page.getByRole('heading', { name: 'Test knowledge' })
+    page.getByRole('heading', { name: 'Mark Complete — test your knowledge' })
   ).toBeVisible();
 
   // Answer every MC question with a deliberately wrong option, and every
@@ -99,12 +112,14 @@ test('a sub-80% quiz attempt is recorded but does not unlock Confident; an 80%+ 
     .getByRole('button', { name: 'Close', exact: true })
     .click();
 
-  // Not unlocked - clicking Confident opens the quiz again, not a status
-  // write.
-  const row = page.locator('.check-row').first();
-  await row.getByRole('button', { name: 'Confident' }).click();
+  // Not complete - the header shows the attempt status and offers a retake.
   await expect(
-    page.getByRole('heading', { name: 'Test knowledge' })
+    page.getByText('Test attempted — not passed (0/10)')
+  ).toBeVisible();
+  await expect(page.getByText(/Completed/)).toHaveCount(0);
+  await page.getByRole('button', { name: 'Mark Complete' }).click();
+  await expect(
+    page.getByRole('heading', { name: 'Mark Complete — test your knowledge' })
   ).toBeVisible();
 
   // Now answer everything correctly (10/10).
@@ -129,10 +144,12 @@ test('a sub-80% quiz attempt is recorded but does not unlock Confident; an 80%+ 
     .getByRole('button', { name: 'Close', exact: true })
     .click();
 
-  // Confident is now reachable directly.
-  await row.getByRole('button', { name: 'Confident' }).click();
-  await expect(row.getByRole('button', { name: 'Confident' })).toHaveClass(
-    /on/
+  // Chapter is now complete and survives a reload.
+  await expect(page.locator('.chapter-complete')).toBeVisible();
+  await page.reload();
+  await expect(page.locator('.chapter-complete')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Mark Complete' })).toHaveCount(
+    0
   );
 
   // Both attempts appear in History.
@@ -142,7 +159,7 @@ test('a sub-80% quiz attempt is recorded but does not unlock Confident; an 80%+ 
   await expect(page.getByText('Not passed')).toBeVisible();
 });
 
-test('an already-Confident topic survives a later failed quiz re-attempt', async ({
+test('a completed chapter stays completed and no longer offers Mark Complete', async ({
   page,
 }) => {
   const topicId = 'consequences';
@@ -166,47 +183,38 @@ test('an already-Confident topic survives a later failed quiz re-attempt', async
     data: { user },
   } = await studentClient.auth.getUser();
 
-  // Directly seed a passing attempt and a confident status, to isolate
-  // this test from the full quiz-answering flow already covered above.
-  await studentClient.from('mastery_attempts').insert({
-    topic_id: topicId,
-    route: 'quiz',
-    score: 8,
-    max_score: 10,
-    passed: true,
-    attempted_by: user!.id,
-  });
-  await studentClient.from('subtopic_status').upsert({
-    subtopic_id: `${topicId}__0`,
-    status: 'confident',
-    updated_by: user!.id,
-  });
+  // Seed a passing attempt, a later failing attempt, and completion:
+  // completion is sticky and not revoked by the later failure.
+  await studentClient.from('mastery_attempts').insert([
+    {
+      topic_id: topicId,
+      route: 'quiz',
+      score: 8,
+      max_score: 10,
+      passed: true,
+      attempted_by: user!.id,
+    },
+    {
+      topic_id: topicId,
+      route: 'quiz',
+      score: 2,
+      max_score: 10,
+      passed: false,
+      attempted_by: user!.id,
+    },
+  ]);
+  await studentClient
+    .from('topic_completion')
+    .insert({ topic_id: topicId, completed_by: user!.id });
 
   await page.goto(`/topic/${topicId}`);
-  const row = page.locator('.check-row').first();
-  await expect(row.getByRole('button', { name: 'Confident' })).toHaveClass(
-    /on/
-  );
-
-  // A later failed re-attempt must not revoke it (requirements.md §12.5).
-  await page.getByRole('button', { name: 'Test knowledge' }).click();
-  const shortAnswerInputs = page.locator('.mastery-short-answer');
-  const count = await shortAnswerInputs.count();
-  for (let i = 0; i < count; i++) {
-    await shortAnswerInputs.nth(i).fill('zzz-wrong-zzz');
-  }
-  await page.getByRole('button', { name: 'Submit quiz' }).click();
-  await expect(page.getByText(/correct \(need/)).toBeVisible();
-  await page
-    .locator('.mastery-result')
-    .getByRole('button', { name: 'Close', exact: true })
-    .click();
-
-  await expect(row.getByRole('button', { name: 'Confident' })).toHaveClass(
-    /on/
+  await expect(page.locator('.chapter-complete')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Mark Complete' })).toHaveCount(
+    0
   );
 
   await admin.from('mastery_attempts').delete().eq('topic_id', topicId);
+  await admin.from('topic_completion').delete().eq('topic_id', topicId);
 });
 
 test('a programming-challenge attempt needs both challenges passing', async ({
@@ -216,9 +224,9 @@ test('a programming-challenge attempt needs both challenges passing', async ({
   await resetMasteryState(topicId);
 
   await page.goto(`/topic/${topicId}`);
-  await page.getByRole('button', { name: 'Test knowledge' }).click();
+  await page.getByRole('button', { name: 'Mark Complete' }).click();
   await expect(
-    page.getByRole('heading', { name: 'Test knowledge' })
+    page.getByRole('heading', { name: 'Mark Complete — test your knowledge' })
   ).toBeVisible();
 
   const challenges = MASTERY_CHALLENGES[topicId];
@@ -232,9 +240,8 @@ test('a programming-challenge attempt needs both challenges passing', async ({
     .getByRole('button', { name: 'Close', exact: true })
     .click();
 
-  const row = page.locator('.check-row').first();
-  await row.getByRole('button', { name: 'Confident' }).click();
   await expect(
-    page.getByRole('heading', { name: 'Test knowledge' })
+    page.getByText('Test attempted — not passed (0/2)')
   ).toBeVisible();
+  await expect(page.locator('.chapter-complete')).toHaveCount(0);
 });

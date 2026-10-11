@@ -1018,6 +1018,14 @@ established.
 
 ### 6.13 "Confident" mastery gate (req. §12)
 
+> **Amended 2026-10-11:** the gate now fronts chapter completion, not the
+> `confident` sub-topic status. `components/ChapterCompleteControl.tsx`
+> (topic header) opens the quiz/challenge modal on **Mark Complete**, or
+> completes directly if `useMasteryGateStatus` is already passed; a pass
+> calls `useCompleteTopic` (`lib/db/use-topic-completion.ts`, table
+> `topic_completion`, insert-only so completion is sticky). `TopicChecklist`
+> no longer intercepts `confident`.
+
 Per-topic gate (13 gates, §12.1), two routes today; §12's sibling document
 (`specs/exam-question-bank/design.md`) adds a third against the same
 schema and entry points.

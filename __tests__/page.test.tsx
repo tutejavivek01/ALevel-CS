@@ -33,6 +33,9 @@ vi.mock('@/lib/db/use-ocr-challenge-review-statuses', () => ({
 vi.mock('@/lib/db/use-reading-state', () => ({
   useAllTopicReadState: () => ({ data: {}, isLoading: false }),
 }));
+vi.mock('@/lib/db/use-topic-completion', () => ({
+  useAllTopicCompletion: () => ({ data: {}, isLoading: false }),
+}));
 test('dashboard page renders the specification map with all 13 topics', () => {
   render(<DashboardPage />);
   expect(screen.getByText('Specification map')).toBeDefined();

@@ -96,7 +96,7 @@ test('a needs_review question is attemptable and shows its notice; Year 13 is hi
   ).toBeVisible();
 });
 
-test('reaching the exam-question threshold unlocks Confident, via the same gate as the quiz/challenge routes', async ({
+test('reaching the exam-question threshold lets Mark Complete finish without the questionnaire', async ({
   page,
 }) => {
   // 4.11 Big Data: 4 questions, 23 marks total (ch72-q1..3, no parts;
@@ -147,13 +147,17 @@ test('reaching the exam-question threshold unlocks Confident, via the same gate 
   }
 
   await page.goto('/topic/big-data');
-  const row = page.locator('.check-row').first();
-  await row.getByRole('button', { name: 'Confident' }).click();
   // No mastery_attempts row exists for this topic at all - the exam-
-  // question threshold alone must be what unlocks it.
-  await expect(row.getByRole('button', { name: 'Confident' })).toHaveClass(
-    /on/
-  );
+  // question threshold alone must be what lets Mark Complete finish
+  // directly, with no questionnaire modal.
+  await admin.from('topic_completion').delete().eq('topic_id', 'big-data');
+  await page.reload();
+  await page.getByRole('button', { name: 'Mark Complete' }).click();
+  await expect(page.locator('.chapter-complete')).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Mark Complete — test your knowledge' })
+  ).not.toBeVisible();
 
+  await admin.from('topic_completion').delete().eq('topic_id', 'big-data');
   await admin.from('exam_question_attempts').delete().eq('topic_id', '4.11');
 });

@@ -663,6 +663,16 @@ collapsed by sub-section so it doesn't bury the checklist.
 
 ## 12. "Confident" mastery gate
 
+> **Amended 2026-10-11 — the gate moved from sub-topic to chapter level.**
+> Setting a sub-topic to `confident` is now free self-assessment (no test).
+> The routes, thresholds and attempt history below are unchanged, but they
+> are now asked only when the student clicks **Mark Complete** in the topic
+> header. A pass (or an already-satisfied exam-question threshold) writes a
+> sticky `topic_completion` row (migration 0033); a fail leaves the chapter
+> incomplete and the header shows "Test attempted — not passed (score)".
+> Dashboard/overall progress count completed chapters. Where the text below
+> says "setting confident" read "marking the chapter complete".
+
 Added 2026-09-12. Extends §2: a student can no longer set a sub-topic
 straight to `confident` by clicking a button. She must first demonstrate
 it, through one of the routes below. This is deliberately a minimal,

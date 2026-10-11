@@ -1,5 +1,9 @@
 import { describe, expect, test } from 'vitest';
-import { overallProgress, topicProgress } from '../lib/progress';
+import {
+  chapterProgress,
+  overallProgress,
+  topicProgress,
+} from '../lib/progress';
 import { TOPICS } from '../lib/spec/topics';
 import { subtopicId } from '../lib/spec/subtopics';
 import type { SubtopicStatusMap } from '../lib/db/use-subtopic-status';
@@ -58,5 +62,30 @@ describe('overallProgress', () => {
     const result = overallProgress(statuses);
     expect(result.pct).toBe(100);
     expect(result.confident).toBe(result.total);
+  });
+});
+
+describe('chapterProgress', () => {
+  test('no completions is 0%', () => {
+    expect(chapterProgress({})).toEqual({
+      pct: 0,
+      completed: 0,
+      total: TOPICS.length,
+    });
+  });
+
+  test('counts only known topics that are completed', () => {
+    const result = chapterProgress({
+      programming: '2026-01-01T00:00:00Z',
+      'not-a-topic': '2026-01-01T00:00:00Z',
+    });
+    expect(result.completed).toBe(1);
+    expect(result.pct).toBe(Math.round((1 / TOPICS.length) * 100));
+  });
+
+  test('every topic completed is 100%', () => {
+    const completion: Record<string, string> = {};
+    for (const topic of TOPICS) completion[topic.id] = '2026-01-01T00:00:00Z';
+    expect(chapterProgress(completion).pct).toBe(100);
   });
 });

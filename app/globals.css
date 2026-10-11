@@ -1673,3 +1673,27 @@ svg.fsm text.edge-label {
   margin-left: 5px;
   vertical-align: middle;
 }
+
+/* chapter-level Mark Complete control (topic header) */
+.topic-head-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+.chapter-status {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 12px;
+}
+.chapter-complete {
+  font-weight: 700;
+  color: var(--accent);
+}
+.chapter-attempted {
+  color: var(--ink-dim);
+  font-weight: 600;
+}

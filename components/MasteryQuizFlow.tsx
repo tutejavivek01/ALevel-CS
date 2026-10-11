@@ -10,15 +10,18 @@ import {
   useSubmitMasteryQuizAttempt,
 } from '@/lib/db/use-mastery-attempts';
 
-// The default "confident" mastery-gate route (design.md §6.13,
+// The default chapter-completion test route (design.md §6.13,
 // requirements.md §12.2): 10 questions, graded by plain logic only, 8/10
-// to pass. Every attempt is recorded regardless of outcome.
+// to pass. Every attempt is recorded regardless of outcome. A pass calls
+// onPassed so the caller can mark the chapter complete.
 export function MasteryQuizFlow({
   topicId,
   onDone,
+  onPassed,
 }: {
   topicId: string;
   onDone: () => void;
+  onPassed?: () => void;
 }) {
   const questions = MASTERY_QUIZZES[topicId] ?? [];
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -41,6 +44,7 @@ export function MasteryQuizFlow({
     });
     const outcome = await submit.mutateAsync(items);
     setResult(outcome);
+    if (outcome.passed) onPassed?.();
   }
 
   if (result) {
@@ -48,8 +52,8 @@ export function MasteryQuizFlow({
       <div className="mastery-result">
         <p className={result.passed ? 'ex-feedback ok' : 'ex-feedback no'}>
           {result.passed
-            ? `Passed — ${result.score}/${questions.length} correct. Confident is now unlocked for this topic.`
-            : `Not this time — ${result.score}/${questions.length} correct (need ${MASTERY_QUIZ_PASS_SCORE}/${questions.length}). This attempt is saved in History; you can try again any time.`}
+            ? `Passed — ${result.score}/${questions.length} correct. Chapter marked complete.`
+            : `Not this time — ${result.score}/${questions.length} correct (need ${MASTERY_QUIZ_PASS_SCORE}/${questions.length}). The chapter is not complete yet. This attempt is saved in History; you can try again any time.`}
         </p>
         <button type="button" className="btn2 alt" onClick={onDone}>
           Close

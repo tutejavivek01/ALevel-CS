@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Card } from '@/components/Card';
+import { ChapterCompleteControl } from '@/components/ChapterCompleteControl';
 import { TopicChecklist } from '@/components/TopicChecklist';
 import { TopicSpecDetail } from '@/components/TopicSpecDetail';
 import { TopicWatchResources } from '@/components/TopicWatchResources';
@@ -34,11 +35,14 @@ export default async function TopicPage(props: PageProps<'/topic/[topicId]'>) {
           {topic.unit && <span className="unit-badge">{topic.unit}</span>}
           <p className="blurb">{topic.blurb}</p>
         </div>
-        {readingContent && (
-          <Link href={`/topic/${topic.id}/reading`} className="link-btn">
-            Read more →
-          </Link>
-        )}
+        <div className="topic-head-actions">
+          <ChapterCompleteControl topicId={topic.id} />
+          {readingContent && (
+            <Link href={`/topic/${topic.id}/reading`} className="link-btn">
+              Read more →
+            </Link>
+          )}
+        </div>
       </div>
 
       <TopicChecklist

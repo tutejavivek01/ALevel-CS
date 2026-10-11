@@ -52,3 +52,24 @@ export function overallProgress(statuses: SubtopicStatusMap): OverallProgress {
     total,
   };
 }
+
+// Chapter-level progress: a chapter (topic) counts once it has been marked
+// complete after passing its test (topic_completion). Replaces the
+// subtopic-confident measure for the dashboard.
+export type ChapterProgress = {
+  pct: number;
+  completed: number;
+  total: number;
+};
+
+export function chapterProgress(
+  completion: Record<string, string>
+): ChapterProgress {
+  const total = TOPICS.length;
+  const completed = TOPICS.filter((topic) => completion[topic.id]).length;
+  return {
+    pct: total ? Math.round((completed / total) * 100) : 0,
+    completed,
+    total,
+  };
+}

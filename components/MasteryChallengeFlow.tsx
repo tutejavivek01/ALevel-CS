@@ -14,9 +14,11 @@ import { useSubmitMasteryChallengeAttempt } from '@/lib/db/use-mastery-attempts'
 export function MasteryChallengeFlow({
   topicId,
   onDone,
+  onPassed,
 }: {
   topicId: string;
   onDone: () => void;
+  onPassed?: () => void;
 }) {
   const challenges = MASTERY_CHALLENGES[topicId] ?? [];
   const worker = usePyodideWorker();
@@ -58,6 +60,7 @@ export function MasteryChallengeFlow({
       }
       const outcome = await submit.mutateAsync(items);
       setResult(outcome);
+      if (outcome.passed) onPassed?.();
     } finally {
       setRunning(false);
     }
@@ -68,8 +71,8 @@ export function MasteryChallengeFlow({
       <div className="mastery-result">
         <p className={result.passed ? 'ex-feedback ok' : 'ex-feedback no'}>
           {result.passed
-            ? `Both challenges passed. Confident is now unlocked for this topic.`
-            : `${result.score}/${challenges.length} passed — both are needed. This attempt is saved in History; you can try again any time.`}
+            ? `Both challenges passed. Chapter marked complete.`
+            : `${result.score}/${challenges.length} passed — both are needed. The chapter is not complete yet. This attempt is saved in History; you can try again any time.`}
         </p>
         <button type="button" className="btn2 alt" onClick={onDone}>
           Close

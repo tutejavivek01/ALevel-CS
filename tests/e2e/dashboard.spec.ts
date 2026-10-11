@@ -18,12 +18,10 @@ test('dashboard shows live aggregate numbers that update without reload', async 
   await studentPage.getByRole('button', { name: 'Sign in' }).click();
   await studentPage.waitForURL('/');
 
-  // `algorithms` is on the mastery gate's programming-challenge route
-  // (design.md §6.13) - clicking Confident directly no longer works
-  // until that topic's gate has been passed at least once. Seed a
-  // passing attempt so this test can keep exercising the toggle/KPI
-  // behaviour it actually cares about, not the gate itself (which
-  // mastery-gate.spec.ts covers).
+  // Chapter completion (design.md §6.13) asks the topic's test on Mark
+  // Complete. Seed a passing attempt so Mark Complete completes directly
+  // and this test can exercise the live KPI behaviour it actually cares
+  // about, not the test itself (mastery-gate.spec.ts covers that).
   const admin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -40,6 +38,8 @@ test('dashboard shows live aggregate numbers that update without reload', async 
   const {
     data: { user: studentUser },
   } = await studentAuth.auth.getUser();
+  await admin.from('topic_completion').delete().eq('topic_id', 'algorithms');
+  await admin.from('mastery_attempts').delete().eq('topic_id', 'algorithms');
   await admin.from('mastery_attempts').insert({
     topic_id: 'algorithms',
     route: 'challenge',
@@ -63,36 +63,26 @@ test('dashboard shows live aggregate numbers that update without reload', async 
 
   // Supporter watches the dashboard the whole time - never reloads.
   await supporterPage.goto('/');
-  const kpiConfidentBefore = await supporterPage
-    .locator('.kpi', { hasText: 'Sub-topics marked confident' })
+  const kpiBefore = await supporterPage
+    .locator('.kpi', { hasText: 'Chapters marked complete' })
     .locator('.n')
     .innerText();
 
-  // Student changes a status on a topic page.
+  // Student completes the chapter on its topic page.
   await studentPage.goto('/topic/algorithms');
-  const row = studentPage.locator('.check-row', {
-    hasText: 'Bubble sort & merge sort',
-  });
-  const wasConfident = await row
-    .getByRole('button', { name: 'Confident' })
-    .evaluate((el) => el.classList.contains('on'));
-  // Toggle to a known state so the KPI is guaranteed to change either way.
-  await row
-    .getByRole('button', { name: wasConfident ? 'Learning' : 'Confident' })
-    .click();
-  await expect(
-    row.getByRole('button', { name: wasConfident ? 'Learning' : 'Confident' })
-  ).toHaveClass(/on/);
+  await studentPage.getByRole('button', { name: 'Mark Complete' }).click();
+  await expect(studentPage.locator('.chapter-complete')).toBeVisible();
 
   // Supporter's dashboard (never navigated/reloaded) should update live.
   await expect(async () => {
     const after = await supporterPage
-      .locator('.kpi', { hasText: 'Sub-topics marked confident' })
+      .locator('.kpi', { hasText: 'Chapters marked complete' })
       .locator('.n')
       .innerText();
-    expect(after).not.toBe(kpiConfidentBefore);
+    expect(after).not.toBe(kpiBefore);
   }).toPass({ timeout: 10000 });
 
+  await admin.from('topic_completion').delete().eq('topic_id', 'algorithms');
   await admin.from('mastery_attempts').delete().eq('topic_id', 'algorithms');
   await studentCtx.close();
   await supporterCtx.close();
